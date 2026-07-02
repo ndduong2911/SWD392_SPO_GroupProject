@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - Tag List Management</title>
+    <style>
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        }
+        
+        body { 
+            background-color: #fcf8fa; /* Nền sáng ánh hồng Magenta nhạt */
+            color: #212121; 
+        }
+        
+        /* TOP NAV BAR STYLED BY PINTEREST */
+        .main-navbar { 
+            background-color: #ffffff; 
+            padding: 14px 24px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            position: sticky; top: 0; z-index: 1000;
+            border-bottom: 1px solid #f3f3f3;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        
+        .brand-logo { 
+            width: 40px; height: 40px;
+            background-color: #d11174; /* Tông màu chủ đạo Magenta */
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: #ffffff; font-weight: bold; font-size: 20px; text-decoration: none;
+        }
+
+        .role-badge {
+            background-color: #475569; color: #ffffff;
+            padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700;
+        }
+        .role-badge.admin { background-color: #d11174; }
+
+        /* CORE CONTAINER */
+        .hub-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        .hub-header { margin-bottom: 35px; text-align: center; }
+        .hub-header h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+        .hub-header p { color: #767676; font-size: 15px; }
+
+        /* Ô TẠO TAG NHANH DÀNH CHO CẢ USER VÀ ADMIN */
+        .tag-action-box {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 24px;
+            border: 1px solid #fbcfe8;
+            box-shadow: 0 4px 20px rgba(209, 17, 116, 0.03);
+            display: flex;
+            gap: 16px;
+            margin-bottom: 40px;
+            align-items: center;
+        }
+
+        .input-wrapper { flex-grow: 1; position: relative; }
+        .input-wrapper span { 
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%); 
+            font-weight: 700; color: #d11174; font-size: 18px;
+        }
+
+        .tag-input-field {
+            width: 100%;
+            padding: 14px 16px 14px 38px;
+            font-size: 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 16px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .tag-input-field:focus {
+            border-color: #d11174;
+            box-shadow: 0 0 0 4px rgba(209, 17, 116, 0.1);
+        }
+
+        .btn-create-tag {
+            background-color: #d11174; color: #ffffff; border: none;
+            padding: 14px 28px; border-radius: 16px; font-size: 15px; font-weight: 700;
+            cursor: pointer; white-space: nowrap; transition: background-color 0.2s, transform 0.1s;
+        }
+        .btn-create-tag:hover { background-color: #be123c; }
+        .btn-create-tag:active { transform: scale(0.97); }
+
+        /* LƯỚI DANH SÁCH TAG MATRIX */
+        .tag-directory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .tag-node-card {
+            background-color: #ffffff;
+            border: 1px solid #fbcfe8;
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 160px;
+            position: relative;
+            transition: all 0.2s ease-in-out;
+        }
+        .tag-node-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(209, 17, 116, 0.06);
+        }
+
+        .node-name { font-size: 22px; font-weight: 800; color: #212121; margin-bottom: 4px; }
+        .node-name::before { content: "#"; color: #d11174; margin-right: 2px; }
+        .node-meta { font-size: 13px; color: #767676; font-weight: 500; }
+
+        /* BỘ NÚT HÀNH ĐỘNG (CONTROL ACTION ROW) */
+        .card-actions-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px solid #fdf2f8;
+        }
+
+        /* Nút theo dõi dành cho User */
+        .node-follow-btn {
+            background-color: #fff1f7; color: #d11174; border: none;
+            padding: 8px 16px; border-radius: 14px; font-size: 12px; font-weight: 700;
+            cursor: pointer; transition: all 0.15s ease;
+        }
+        .node-follow-btn:hover { background-color: #d11174; color: #ffffff; }
+
+        /* VÙNG CHỨA CÁC NÚT ĐẶC QUYỀN CỦA ADMIN (CHỈ XUẤT HIỆN KHI LÀ ADMIN) */
+        .admin-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-admin {
+            border: none; padding: 6px 12px; border-radius: 10px;
+            font-size: 11px; font-weight: 700; cursor: pointer; transition: background-color 0.15s;
+        }
+
+        /* Nút Sửa màu Xám Slate chuyên nghiệp */
+        .btn-admin-edit { background-color: #f1f5f9; color: #475569; }
+        .btn-admin-edit:hover { background-color: #cbd5e1; color: #1e293b; }
+
+        /* Nút Xóa màu Đỏ Đậm rực rỡ cảnh báo lỗi */
+        .btn-admin-delete { background-color: #ffe4e6; color: #e11d48; }
+        .btn-admin-delete:hover { background-color: #e11d48; color: #ffffff; }
+    </style>
+</head>
+<body>
+
+<nav class="main-navbar">
+    <a href="#" class="brand-logo">S</a>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 13px; color: #767676;">Chế độ xem:</span>
+        <span class="role-badge admin">Administrator Mode</span>
+    </div>
+</nav>
+
+<main class="hub-container">
+    <header class="hub-header">
+        <h1>Hệ thống Quản lý Thẻ</h1>
+        <p>Thành viên có thể tự do tạo tag mới. Duy nhất Quản trị viên (Admin) có thẩm quyền Sửa hoặc Xóa.</p>
+    </header>
+
+    <section class="tag-action-box">
+        <div class="input-wrapper">
+            <span>#</span>
+            <input type="text" class="tag-input-field" placeholder="Nhập từ khóa tag mới để khởi tạo (ví dụ: thuthuy2026)...">
+        </div>
+        <button class="btn-create-tag">+ Tạo Tag mới</button>
+    </section>
+
+    <section class="tag-directory-grid">
+        
+        <div class="tag-node-card">
+            <div>
+                <div class="node-name">thanhxuan</div>
+                <span class="node-meta">45.8k hình ảnh</span>
+            </div>
+            <div class="card-actions-row">
+                <button class="node-follow-btn">Theo dõi</button>
+                <div class="admin-controls">
+                    <button class="btn-admin btn-admin-edit">Sửa</button>
+                    <button class="btn-admin btn-admin-delete">Xóa</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tag-node-card">
+            <div>
+                <div class="node-name">cyberpunk</div>
+                <span class="node-meta">29.1k hình ảnh</span>
+            </div>
+            <div class="card-actions-row">
+                <button class="node-follow-btn">Theo dõi</button>
+                <div class="admin-controls">
+                    <button class="btn-admin btn-admin-edit">Sửa</button>
+                    <button class="btn-admin btn-admin-delete">Xóa</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tag-node-card">
+            <div>
+                <div class="node-name">minimalism</div>
+                <span class="node-meta">18.4k hình ảnh</span>
+            </div>
+            <div class="card-actions-row">
+                <button class="node-follow-btn">Theo dõi</button>
+                <div class="admin-controls">
+                    <button class="btn-admin btn-admin-edit">Sửa</button>
+                    <button class="btn-admin btn-admin-delete">Xóa</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tag-node-card">
+            <div>
+                <div class="node-name">phongcanh</div>
+                <span class="node-meta">62.0k hình ảnh</span>
+            </div>
+            <div class="card-actions-row">
+                <button class="node-follow-btn">Theo dõi</button>
+                <div class="admin-controls">
+                    <button class="btn-admin btn-admin-edit">Sửa</button>
+                    <button class="btn-admin btn-admin-delete">Xóa</button>
+                </div>
+            </div>
+        </div>
+
+    </section>
+</main>
+
+</body>
+</html>

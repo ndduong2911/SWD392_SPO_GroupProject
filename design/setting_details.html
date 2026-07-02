@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - New Setting</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333333;
+        }
+
+        /* Top Administrative Navigation Bar */
+        .admin-navbar {
+            background-color: #1e293b;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffffff;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar-menu a {
+            text-decoration: none;
+            color: #94a3b8;
+            font-size: 15px;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .navbar-menu a:hover, .navbar-menu a.active {
+            color: #ffffff;
+        }
+
+        /* Main Workspace Layout */
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .workspace-card {
+            background-color: #ffffff;
+            border-radius: 6px;
+            padding: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .workspace-header {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+
+        .workspace-header h2 {
+            color: #0f172a;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .workspace-header p {
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Form Layout Styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #475569;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .form-group label span {
+            color: #e74c3c;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #334155;
+            background-color: #ffffff;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #334155;
+            cursor: pointer;
+        }
+
+        /* Form Action Buttons Row */
+        .form-actions-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 30px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f1f5f9;
+        }
+
+        .btn-primary {
+            background-color: #2ecc71;
+            border: none;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Administration Top Nav Link Layer -->
+<nav class="admin-navbar">
+    <a href="admin-dashboard.html" class="navbar-brand">System Administration Portal</a>
+    <div class="navbar-menu">
+        <a href="settings-list.html" class="active">Master Data</a>
+        <a href="users-list.html">User Control</a>
+        <a href="moderation-queue.html">Content Tickets</a>
+    </div>
+</nav>
+
+<!-- Main Form Container Component -->
+<div class="container">
+    <div class="workspace-card">
+        
+        <header class="workspace-header">
+            <h2>Create New Setting</h2>
+            <p>Initialize a brand new system parameter constant, validation criteria, or operational user role definition record.</p>
+        </header>
+
+        <form action="#" method="POST">
+            <div class="form-grid">
+                
+                <!-- Setting Name Field -->
+                <div class="form-group">
+                    <label for="setting-name">Setting Name <span>*</span></label>
+                    <input type="text" id="setting-name" name="setting_name" class="form-control" placeholder="e.g., MaxUploadSize, PremiumCreator" required>
+                </div>
+
+                <!-- Setting Type Selector -->
+                <div class="form-group">
+                    <label for="setting-type">Setting Type <span>*</span></label>
+                    <select id="setting-type" name="setting_type" class="form-control" required>
+                        <option value="" disabled selected>-- Select Type Reference --</option>
+                        <option value="role">User Role</option>
+                        <option value="system">System Configuration</option>
+                        <option value="utility">Utility Constant</option>
+                    </select>
+                </div>
+
+                <!-- Value Config Field -->
+                <div class="form-group">
+                    <label for="setting-value">Value Setting String</label>
+                    <input type="text" id="setting-value" name="setting_value" class="form-control" placeholder="Enter corresponding constant data value">
+                </div>
+
+                <!-- Priority Selection Level -->
+                <div class="form-group">
+                    <label for="setting-priority">Order Priority</label>
+                    <input type="number" id="setting-priority" name="setting_priority" class="form-control" placeholder="Leave empty or input sorting order index number" min="1">
+                </div>
+
+                <!-- Status Context Selection Row -->
+                <div class="form-group full-width">
+                    <label>Initial Status State</label>
+                    <div class="radio-group">
+                        <label class="radio-item">
+                            <input type="radio" name="status" value="active" checked> Active State
+                        </label>
+                        <label class="radio-item">
+                            <input type="radio" name="status" value="inactive"> Inactive State
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Descriptive Explanations Box -->
+                <div class="form-group full-width">
+                    <label for="setting-description">Internal Explanation Notes</label>
+                    <textarea id="setting-description" name="setting_description" class="form-control" placeholder="Provide complete administrative notes or context mapping guidelines for this newly injected row item..."></textarea>
+                </div>
+
+            </div>
+
+            <!-- Form Flow Routing Controls -->
+            <div class="form-actions-row">
+                <a href="settings-list.html" class="btn btn-secondary">Discard Record</a>
+                <button type="submit" class="btn btn-primary">Create Setting</button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - Setting List</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333333;
+        }
+
+        .admin-navbar {
+            background-color: #1e293b;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffffff;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar-menu a {
+            text-decoration: none;
+            color: #94a3b8;
+            font-size: 15px;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .navbar-menu a:hover, .navbar-menu a.active {
+            color: #ffffff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .workspace-card {
+            background-color: #ffffff;
+            border-radius: 6px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .workspace-header {
+            margin-bottom: 25px;
+        }
+
+        .workspace-header h2 {
+            color: #0f172a;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .filter-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .form-select, .form-input {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #334155;
+            background-color: #ffffff;
+        }
+
+        .form-input {
+            width: 240px;
+        }
+
+        .btn-search {
+            padding: 8px 16px;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-search:hover {
+            background-color: #e2e8f0;
+        }
+
+        .link-create-setting {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .link-create-setting:hover {
+            text-decoration: underline;
+        }
+
+        .data-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .master-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .master-table th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            padding: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .master-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+
+        .master-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-active {
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        .status-inactive {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .action-links-cell a {
+            text-decoration: none;
+            color: #3498db;
+            font-weight: 600;
+            margin-right: 12px;
+        }
+
+        .action-links-cell a:hover {
+            text-decoration: underline;
+        }
+
+        .pagination-container {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .page-node {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 32px;
+            padding: 0 6px;
+            border: 1px solid #cbd5e1;
+            background-color: #ffffff;
+            color: #334155;
+            font-size: 13px;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .page-node:hover {
+            background-color: #f1f5f9;
+        }
+
+        .page-node.active {
+            background-color: #3498db;
+            color: #ffffff;
+            border-color: #3498db;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="admin-navbar">
+    <a href="admin-dashboard.html" class="navbar-brand">System Administration Portal</a>
+    <div class="navbar-menu">
+        <a href="settings-list.html" class="active">Master Data</a>
+        <a href="users-list.html">User Control</a>
+        <a href="moderation-queue.html">Content Tickets</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="workspace-card">
+        
+        <header class="workspace-header">
+            <h2>3.3.1.1 Setting List</h2>
+        </header>
+
+        <div class="filter-action-bar">
+            <form action="#" method="GET" class="filter-group">
+                <select name="type_filter" class="form-select">
+                    <option value="all">All Types</option>
+                    <option value="role">User Role</option>
+                    <option value="system">System Configuration</option>
+                </select>
+
+                <select name="status_filter" class="form-select">
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+
+                <input type="text" name="keyword" class="form-input" placeholder="Enter keyword(s) to search">
+                <button type="submit" class="btn-search">Search</button>
+            </form>
+
+            <a href="new-setting.html" class="link-create-setting">New Setting</a>
+        </div>
+
+        <div class="data-table-wrapper">
+            <table class="master-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Id</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th style="width: 120px;">Status</th>
+                        <th style="width: 150px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Manager</td>
+                        <td>User Role</td>
+                        <td></td>
+                        <td><span class="status-active">Active</span></td>
+                        <td class="action-links-cell">
+                            <a href="new-setting.html?id=1">Edit</a>
+                            <a href="#" style="color: #dc2626;">Deactivate</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Admin</td>
+                        <td>User Role</td>
+                        <td></td>
+                        <td><span class="status-inactive">Inactive</span></td>
+                        <td class="action-links-cell">
+                            <a href="new-setting.html?id=3">Edit</a>
+                            <a href="#" style="color: #16a34a;">Activate</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Teacher</td>
+                        <td>User Role</td>
+                        <td></td>
+                        <td><span class="status-active">Active</span></td>
+                        <td class="action-links-cell">
+                            <a href="new-setting.html?id=4">Edit</a>
+                            <a href="#" style="color: #dc2626;">Deactivate</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="pagination-wrapper">
+            <div class="pagination-container">
+                <a href="#" class="page-node">&lt;</a>
+                <a href="#" class="page-node active">1</a>
+                <a href="#" class="page-node">2</a>
+                <span style="color: #94a3b8; margin: 0 4px;">...</span>
+                <a href="#" class="page-node">9</a>
+                <a href="#" class="page-node">10</a>
+                <a href="#" class="page-node">&gt;</a>
+            </div>
+        </footer>
+
+    </div>
+</div>
+
+</body>
+</html>

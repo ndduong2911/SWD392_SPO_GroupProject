@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - View Profile</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333333;
+        }
+
+        /* Top Navigation Bar */
+        .navbar {
+            background-color: #ffffff;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .navbar-menu a {
+            text-decoration: none;
+            color: #555555;
+            font-size: 15px;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .navbar-menu a:hover {
+            color: #3498db;
+        }
+
+        /* Main Layout Grid */
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* Profile Summary Header */
+        .profile-card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .profile-avatar-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid #e2e8f0;
+            background-color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .profile-avatar-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-details {
+            flex-grow: 1;
+        }
+
+        .profile-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .profile-username {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .btn-edit-profile {
+            padding: 8px 16px;
+            background-color: #e2e8f0;
+            border: none;
+            border-radius: 4px;
+            color: #334155;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .btn-edit-profile:hover {
+            background-color: #cbd5e1;
+        }
+
+        .profile-metrics {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 15px;
+        }
+
+        .metric-item {
+            font-size: 15px;
+            color: #64748b;
+        }
+
+        .metric-item strong {
+            color: #0f172a;
+            font-size: 16px;
+        }
+
+        .profile-bio {
+            font-size: 15px;
+            line-height: 1.5;
+            color: #475569;
+            max-width: 600px;
+        }
+
+        /* Content Tab Selection Toggle */
+        .content-tabs {
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            gap: 30px;
+        }
+
+        .tab-item {
+            padding-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #64748b;
+            text-decoration: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-item.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        /* Photo Feed Display Grid */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .photo-card {
+            background-color: #ffffff;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            position: relative;
+            aspect-ratio: 1 / 1;
+            cursor: pointer;
+            group: hover;
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .photo-card:hover img {
+            transform: scale(1.03);
+        }
+
+        .photo-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            color: #ffffff;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .photo-card:hover .photo-overlay {
+            opacity: 1;
+        }
+
+        .overlay-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-private {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(15, 23, 42, 0.75);
+            color: #ffffff;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            font-weight: 600;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="home.html" class="navbar-brand">Sharing Pictures</a>
+    <div class="navbar-menu">
+        <a href="home.html">Home</a>
+        <a href="search.html">Explore</a>
+        <a href="upload.html">Upload</a>
+        <a href="profile.html" style="color: #3498db;">My Profile</a>
+    </nav>
+
+<div class="container">
+    
+    <header class="profile-card">
+        <div class="profile-avatar-wrapper">
+            <span>J</span>
+            </div>
+        <div class="profile-details">
+            <div class="profile-header-row">
+                <h1 class="profile-username">john_doe</h1>
+                <a href="update-profile.html" class="btn-edit-profile">Edit Profile</a>
+            </div>
+            
+            <div class="profile-metrics">
+                <span class="metric-item"><strong>12</strong> photos</span>
+                <span class="metric-item"><strong>4</strong> albums</span>
+                <span class="metric-item"><strong>248</strong> followers</span>
+                <span class="metric-item"><strong>180</strong> following</span>
+            </div>
+
+            <p class="profile-bio">Landscape and urban photographer based out of Hanoi. Capturing visual stories one frame at a time. Welcome to my gallery portfolio!</p>
+        </div>
+    </header>
+
+    <div class="content-tabs">
+        <a class="tab-item active">My Photos</a>
+        <a href="albums.html" class="tab-item">My Albums</a>
+    </div>
+
+    <main class="photo-grid">
+        <div class="photo-card" onclick="window.location.href='photo-detail.html'">
+            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=500&q=80" alt="Mountain Landscape">
+            <div class="photo-overlay">
+                <div class="overlay-item">❤️ 45</div>
+                <div class="overlay-item">💬 8</div>
+            </div>
+        </div>
+
+        <div class="photo-card" onclick="window.location.href='photo-detail.html'">
+            <span class="badge-private">Private</span>
+            <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=500&q=80" alt="Forest Mist">
+            <div class="photo-overlay">
+                <div class="overlay-item">❤️ 0</div>
+                <div class="overlay-item">💬 0</div>
+            </div>
+        </div>
+
+        <div class="photo-card" onclick="window.location.href='photo-detail.html'">
+            <img src="https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=500&q=80" alt="Nature Trail">
+            <div class="photo-overlay">
+                <div class="overlay-item">❤️ 112</div>
+                <div class="overlay-item">💬 24</div>
+            </div>
+        </div>
+
+        <div class="photo-card" onclick="window.location.href='photo-detail.html'">
+            <img src="https://images.unsplash.com/photo-1472214222541-d510753a8707?auto=format&fit=crop&w=500&q=80" alt="Sunset Valley">
+            <div class="photo-overlay">
+                <div class="overlay-item">❤️ 89</div>
+                <div class="overlay-item">💬 14</div>
+            </div>
+        </div>
+    </main>
+
+</div>
+
+</body>
+</html>

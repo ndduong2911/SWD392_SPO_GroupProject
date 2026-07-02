@@ -1,0 +1,108 @@
+@page "/"
+@using SharingPictureOnline.Services
+@inject IPhotoService PhotoService
+
+<PageTitle>Khám Phá Hình Ảnh | FakePinterest</PageTitle>
+
+<section class="relative bg-slate-900 text-white py-24 px-4 overflow-hidden">
+    <div class="absolute inset-0 opacity-40 bg-[url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center blur-sm"></div>
+    <div class="relative max-w-3xl mx-auto text-center z-10">
+        <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">
+            Khám phá kho tàng ảnh đẹp miễn phí
+        </h1>
+        <p class="text-lg text-slate-200 mb-8">
+            Được chia sẻ bởi cộng đồng nhiếp ảnh gia tài năng trên toàn thế giới.
+        </p>
+        <form class="relative flex items-center bg-white rounded-full shadow-lg p-2 max-w-2xl mx-auto" @onsubmit="Search" @onsubmit:preventDefault @formname="SearchForm">
+            <i class="fa-solid fa-magnifying-glass text-slate-400 ml-4 text-lg"></i>
+            <input type="text" 
+                   autocomplete="off"
+                   @bind="searchText" 
+                   placeholder="Tìm kiếm ảnh độ phân giải cao, chủ đề..." 
+                   class="w-full pl-3 pr-4 py-3 text-slate-900 focus:outline-none focus:ring-0 search-input text-base">
+            <button type="submit" 
+                    class="bg-fuchsia-600 text-white px-6 py-3 rounded-full hover:bg-fuchsia-700 font-medium transition shrink-0">
+                Tìm kiếm
+            </button>
+        </form>
+    </div>
+</section>
+
+<main class="max-w-7xl mx-auto px-4 py-10">
+    <div class="mb-10">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-fire text-orange-500"></i> Xu hướng tìm kiếm
+        </h2>
+        <div class="flex flex-wrap gap-2">
+            <a href="#" class="px-4 py-2 bg-white border border-slate-200 hover:border-fuchsia-500 hover:text-fuchsia-600 rounded-full text-sm font-medium transition shadow-xs">#Nature</a>
+            <a href="#" class="px-4 py-2 bg-white border border-slate-200 hover:border-fuchsia-500 hover:text-fuchsia-600 rounded-full text-sm font-medium transition shadow-xs">#Cyberpunk</a>
+            <a href="#" class="px-4 py-2 bg-white border border-slate-200 hover:border-fuchsia-500 hover:text-fuchsia-600 rounded-full text-sm font-medium transition shadow-xs">#Minimalism</a>
+            <a href="#" class="px-4 py-2 bg-white border border-slate-200 hover:border-fuchsia-500 hover:text-fuchsia-600 rounded-full text-sm font-medium transition shadow-xs">#StreetPhotography</a>
+            <a href="#" class="px-4 py-2 bg-white border border-slate-200 hover:border-fuchsia-500 hover:text-fuchsia-600 rounded-full text-sm font-medium transition shadow-xs">#Travel2026</a>
+            <a href="#" class="px-4 py-2 bg-white border border-slate-200 hover:border-fuchsia-500 hover:text-fuchsia-600 rounded-full text-sm font-medium transition shadow-xs">#Portrait</a>
+            <a href="#" class="px-4 py-2 bg-white border border-slate-200 hover:border-fuchsia-500 hover:text-fuchsia-600 rounded-full text-sm font-medium transition shadow-xs">#Architecture</a>
+        </div>
+    </div>
+
+    @if (photos == null)
+    {
+        <div class="text-center py-20">
+            <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600 mb-4"></i>
+            <p class="text-slate-500">Đang tải ảnh...</p>
+        </div>
+    }
+    else if (!photos.Any())
+    {
+        <div class="text-center py-20">
+            <i class="fa-solid fa-image text-6xl text-slate-300 mb-4"></i>
+            <p class="text-slate-500 text-lg">Chưa có ảnh nào. Hãy bắt đầu chia sẻ ảnh của bạn!</p>
+        </div>
+    }
+    else
+    {
+        <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+            @foreach (var photo in photos)
+            {
+                <div class="break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm bg-slate-200">
+                    <img src="@GetImageUrl(photo.StorageKey)" 
+                         alt="@photo.Title" 
+                         class="w-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end text-white">
+                        <p class="font-medium">@photo.Title</p>
+                        <span class="text-xs text-slate-300">@(photo.User?.Username ?? "Anonymous")</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</main>
+
+@code {
+    private IEnumerable<Models.Photo>? photos;
+    private string searchText = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        photos = await PhotoService.GetAllPhotosAsync();
+    }
+
+    private async Task Search()
+    {
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            photos = await PhotoService.GetAllPhotosAsync();
+            photos = photos.Where(p => 
+                p.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) || 
+                (p.Description ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+            photos = await PhotoService.GetAllPhotosAsync();
+        }
+    }
+
+    private string GetImageUrl(string storageKey)
+    {
+        return $"/uploads/{storageKey}";
+    }
+}

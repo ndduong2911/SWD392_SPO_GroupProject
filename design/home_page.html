@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - Pinterest Home Feed</title>
+    <style>
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; 
+        }
+        
+        body { 
+            background-color: #ffffff; 
+            color: #212121; 
+        }
+        
+        /* NAVIGATION BAR THỜI TRANG KIỂU PINTEREST (Tối giản, bo góc) */
+        .main-navbar { 
+            background-color: #ffffff; 
+            padding: 12px 24px; 
+            display: flex; 
+            align-items: center; 
+            gap: 16px;
+            position: sticky; 
+            top: 0; 
+            z-index: 1000;
+        }
+        
+        /* LOGO HỆ THỐNG MÀU MAGENTA CỰC ĐẬM ĐÀ */
+        .brand-logo { 
+            width: 40px;
+            height: 40px;
+            background-color: #d11174; 
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 20px;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .brand-logo:hover {
+            transform: scale(1.05);
+        }
+
+        .nav-btn {
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 16px;
+            border-radius: 24px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-home {
+            background-color: #212121;
+            color: #ffffff;
+        }
+
+        .btn-explore {
+            background-color: #ffffff;
+            color: #212121;
+        }
+        .btn-explore:hover {
+            background-color: #f0f0f0;
+        }
+        
+        /* THANH TÌM KIẾM TRÒN DÀI TOÀN KHUNG */
+        .search-container {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .search-bar { 
+            width: 100%; 
+            padding: 12px 16px 12px 44px; 
+            border: none;
+            border-radius: 24px; 
+            font-size: 16px; 
+            background-color: #f1f1f1; 
+            outline: none; 
+            color: #212121;
+            transition: background-color 0.2s;
+        }
+        
+        .search-bar:focus { 
+            background-color: #e1e1e1;
+            box-shadow: 0 0 0 4px rgba(209, 17, 116, 0.15); /* Focus ánh Magenta nhẹ */
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #767676;
+            font-size: 16px;
+        }
+        
+        .nav-actions { 
+            display: flex; 
+            gap: 12px; 
+            align-items: center; 
+        }
+
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #767676;
+            transition: background-color 0.2s;
+        }
+        .icon-button:hover {
+            background-color: #f0f0f0;
+            color: #d11174; /* Đổi màu Magenta khi chọn */
+        }
+        
+        .avatar-circle { 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%; 
+            background-color: #fbcfe8; 
+            color: #d11174; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            font-size: 14px; 
+            cursor: pointer;
+        }
+
+        /* KHU VỰC LƯỚI MASONRY PINTEREST LAYOUT */
+        .feed-container { 
+            max-width: 100%; 
+            margin: 16px auto; 
+            padding: 0 24px; 
+        }
+        
+        .masonry-grid {
+            column-count: 5; /* Tự động chia thành 5 cột */
+            column-gap: 16px; /* Khoảng cách giữa các cột */
+            width: 100%;
+        }
+
+        /* Điều chỉnh số lượng cột mượt mà trên các màn hình khác nhau */
+        @media (max-width: 1200px) { .masonry-grid { column-count: 4; } }
+        @media (max-width: 900px) { .masonry-grid { column-count: 3; } }
+        @media (max-width: 600px) { .masonry-grid { column-count: 2; } }
+
+        .pin-card { 
+            background-color: #ffffff; 
+            border-radius: 16px; 
+            margin-bottom: 16px; /* Khoảng cách trên dưới giữa các pin */
+            break-inside: avoid; /* Ngăn không cho card bị đứt đoạn gãy đôi giữa 2 cột */
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+
+        /* GIẢ LẬP CÁC KÍCH THƯỚC CHIỀU CAO KHÁC NHAU ĐÚNG CHUẨN PINTEREST */
+        .pin-image-wrapper {
+            width: 100%;
+            border-radius: 16px;
+            background-color: #fff1f7; /* Nền sáng ánh hồng Magenta nhạt */
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            color: #be123c; 
+            font-weight: 600; 
+            font-size: 15px;
+            border: 1px solid #fbcfe8;
+            transition: filter 0.2s;
+        }
+
+        .pin-card:hover .pin-image-wrapper {
+            filter: brightness(0.9);
+        }
+
+        /* Định nghĩa các chiều cao bất đối xứng ngẫu nhiên cho Grid */
+        .height-short { height: 220px; }
+        .height-medium { height: 320px; }
+        .height-tall { height: 420px; }
+        .height-extra { height: 280px; }
+
+        /* NÚT SAVE MÀU MAGENTA CHỈ HIỆN KHI HOVER LÊN TRÊN CARD */
+        .pin-save-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background-color: #d11174;
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            border: none;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .pin-card:hover .pin-save-btn {
+            opacity: 1;
+        }
+        
+        .pin-title { 
+            padding: 8px 4px 4px 4px;
+            font-size: 14px; 
+            color: #212121; 
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="main-navbar">
+    <a href="#" class="brand-logo" title="Sharing Pictures System">S</a>
+    <a href="#" class="nav-btn btn-home">Tất cả</a>
+    <a href="#" class="nav-btn btn-explore">Khám phá</a>
+    
+    <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-bar" placeholder="Tìm kiếm ý tưởng, hình ảnh, nghệ thuật...">
+    </div>
+    
+    <div class="nav-actions">
+        <button class="icon-button" title="Thông báo">🔔</button>
+        <button class="icon-button" title="Tin nhắn">💬</button>
+        <div class="avatar-circle" title="Trang cá nhân">D</div>
+    </div>
+</nav>
+
+<div class="feed-container">
+    <div class="masonry-grid">
+        
+        <div class="pin-card">
+            <button class="pin-save-btn">Lưu</button>
+            <div class="pin-image-wrapper height-short">
+                [ Ảnh mèo dễ thương ]
+            </div>
+            <div class="pin-title">Chú mèo thắt nơ</div>
+        </div>
+
+        <div class="pin-card">
+            <button class="pin-save-btn">Lưu</button>
+            <div class="pin-image-wrapper height-tall">
+                [ Câu nói truyền cảm hứng ]
+            </div>
+            <div class="pin-title">Đừng đốt cháy bản thân...</div>
+        </div>
+
+        <div class="pin-card">
+            <button class="pin-save-btn">Lưu</button>
+            <div class="pin-image-wrapper height-medium">
+                [ Tranh nghệ thuật Starry Night ]
+            </div>
+            <div class="pin-title">Snoopy dưới bầu trời sao</div>
+        </div>
+
+        <div class="pin-card">
+            <button class="pin-save-btn">Lưu</button>
+            <div class="pin-image-wrapper height-tall">
+                [ Hình nền hoàng hôn biển ]
+            </div>
+            <div class="pin-title">Yên bình một góc trời</div>
+        </div>
+
+        <div class="pin-card">
+            <button class="pin-save-btn">Lưu</button>
+            <div class="pin-image-wrapper height-medium">
+                [ Meme vui nhộn ]
+            </div>
+            <div class="pin-title">Meme độc lạ đời thường</div>
+        </div>
+
+        <div class="pin-card">
+            <button class="pin-save-btn">Lưu</button>
+            <div class="pin-image-wrapper height-short">
+                [ Bản vẽ xe đua Ferrari ]
+            </div>
+            <div class="pin-title">Đam mê tốc độ F1</div>
+        </div>
+
+        <div class="pin-card">
+            <button class="pin-save-btn">Lưu</button>
+            <div class="pin-image-wrapper height-extra">
+                [ Công thức Toán/Lý ]
+            </div>
+            <div class="pin-title">Einstein E=mc2</div>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

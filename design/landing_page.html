@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - Welcome</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #fff9fb; color: #2d1822; line-height: 1.6; }
+        
+        /* NAVBAR SYSTEM WITH MAGENTA */
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background-color: #ffffff; border-bottom: 1px solid #fbcfe8; }
+        .brand { font-size: 22px; font-weight: 700; color: #e11d48; text-decoration: none; } /* Magenta Logo */
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { text-decoration: none; color: #64748b; font-weight: 600; font-size: 15px; }
+        .btn-login { padding: 8px 20px; border: 1px solid #e11d48; color: #e11d48; border-radius: 4px; transition: all 0.2s; }
+        .btn-login:hover { background-color: #e11d48; color: #ffffff; }
+
+        /* HERO & CONTENT LAYOUT */
+        .hero-section { max-width: 1200px; margin: 80px auto; padding: 0 20px; text-align: center; }
+        .hero-section h1 { font-size: 48px; color: #4c0519; font-weight: 800; margin-bottom: 20px; }
+        .hero-section p { font-size: 18px; color: #64748b; max-width: 600px; margin: 0 auto 30px auto; }
+        
+        .btn-cta { display: inline-block; padding: 12px 32px; background-color: #d11174; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 16px; border-radius: 4px; box-shadow: 0 4px 10px rgba(209, 17, 116, 0.2); transition: background-color 0.2s; }
+        .btn-cta:hover { background-color: #9d0c54; }
+
+        /* FEATURES SECTION VIA LIGHT THEME */
+        .features-grid { max-width: 1000px; margin: 60px auto 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+        .feature-card { background-color: #ffffff; padding: 30px; border-radius: 6px; border: 1px solid #fbcfe8; text-align: left; transition: transform 0.2s; }
+        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(209, 17, 116, 0.05); }
+        .feature-card h3 { font-size: 18px; color: #88094b; margin-bottom: 10px; } /* Magenta Sub-titles */
+        .feature-card p { font-size: 14px; color: #64748b; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="#" class="brand">FakePinterest</a>
+    <div class="nav-links">
+        <a href="#">Explore</a>
+        <a href="#">Community</a>
+        <a href="#" class="btn-login">Sign In</a>
+    </div>
+</nav>
+
+<main class="hero-section">
+    <h1>Share Your Perspective with the World</h1>
+    <p>A secure, community-driven platform designed beautifully for photographers and digital creators to showcase their visual portfolio.</p>
+    <a href="#" class="btn-cta">Get Started For Free</a>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <h3>High-Res Uploads</h3>
+            <p>Retain the crystal clear quality of your original image files without aggressive data compression algorithms.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Creator Profiles</h3>
+            <p>Build your professional network, gather appreciation metrics, and interact directly with other creators.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Safe Community</h3>
+            <p>Our dedicated administration and moderation system ensures a spam-free, respectful canvas for all members.</p>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

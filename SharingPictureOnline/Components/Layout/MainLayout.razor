@@ -1,0 +1,120 @@
+@inherits LayoutComponentBase
+@using SharingPictureOnline.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<header class="bg-white shadow-sm sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <a href="/" class="text-2xl font-bold text-fuchsia-600 flex items-center gap-2">
+            <i class="fa-solid fa-camera-retro"></i> FakePinterest
+        </a>
+        <div class="flex gap-2 items-center">
+            @if (isAuthenticated && currentUser != null)
+            {
+                <div class="flex items-center gap-4">
+                    <button class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
+                        <i class="fa-solid fa-bell text-slate-600"></i>
+                    </button>
+                    <div class="relative" @onclick="ToggleUserMenu">
+                        @if (!string.IsNullOrEmpty(currentUser.UserProfile?.AvatarUrl))
+                        {
+                            <img src="@currentUser.UserProfile.AvatarUrl" 
+                                 alt="@currentUser.Username" 
+                                 class="w-10 h-10 rounded-full object-cover cursor-pointer ring-2 ring-fuchsia-200 hover:ring-fuchsia-400 transition" />
+                        }
+                        else
+                        {
+                            <div class="w-10 h-10 rounded-full bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center font-bold text-sm cursor-pointer hover:bg-fuchsia-200 transition">
+                                @(GetUserInitial(currentUser.Username))
+                            </div>
+                        }
+                        @if (showUserMenu)
+                        {
+                            <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50">
+                                <div class="px-4 py-3 border-b border-slate-200">
+                                    <p class="text-sm font-semibold text-slate-800">@currentUser.Username</p>
+                                    <p class="text-xs text-slate-500">@currentUser.Email</p>
+                                </div>
+                                <a href="/profile" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                    <i class="fa-solid fa-user mr-2"></i>Trang cá nhân
+                                </a>
+                                <a href="/settings" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                    <i class="fa-solid fa-gear mr-2"></i>Cài đặt
+                                </a>
+                                <button @onclick="HandleLogout" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                    <i class="fa-solid fa-right-from-bracket mr-2"></i>Đăng xuất
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <a href="/login" class="px-4 py-2 text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium text-sm transition">
+                    Đăng nhập
+                </a>
+                <a href="/register" class="px-4 py-2 bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700 font-medium text-sm shadow-sm transition">
+                    Đăng ký
+                </a>
+            }
+        </div>
+    </div>
+</header>
+
+@Body
+
+@code {
+    private bool isAuthenticated = false;
+    private Models.User? currentUser = null;
+    private bool showUserMenu = false;
+    private bool isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isInitialized)
+        {
+            isInitialized = true;
+            await UpdateAuthState();
+        }
+    }
+
+    private async Task UpdateAuthState()
+    {
+        try
+        {
+            currentUser = await AuthService.GetCurrentUserAsync();
+            isAuthenticated = currentUser != null;
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Ignore errors during auth check
+        }
+    }
+
+    private void ToggleUserMenu()
+    {
+        showUserMenu = !showUserMenu;
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        showUserMenu = false;
+        Navigation.NavigateTo("/", true);
+    }
+
+    public void Dispose()
+    {
+        // No timer to dispose
+    }
+
+    private string GetUserInitial(string username)
+    {
+        if (string.IsNullOrEmpty(username))
+            return "?";
+        return username.Substring(0, 1).ToUpper();
+    }
+}

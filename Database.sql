@@ -1,0 +1,148 @@
+﻿
+
+-- 1. TẠO BẢNG USER
+CREATE TABLE [USER] (
+    [userID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [username] VARCHAR(255) NOT NULL,
+    [email] VARCHAR(255) NOT NULL,
+    [passwordHash] VARCHAR(255) NOT NULL,
+    [role] VARCHAR(50) NOT NULL CONSTRAINT CHK_User_Role CHECK ([role] IN ('ADMIN', 'USER', 'MODERATOR')), -- Giả định các giá trị enum cho Role
+    [createdAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_User PRIMARY KEY ([userID]),
+    CONSTRAINT UQ_User_Username UNIQUE ([username]),
+    CONSTRAINT UQ_User_Email UNIQUE ([email])
+);
+
+-- 2. TẠO BẢNG USER_PROFILE (Mối quan hệ 1-1 với USER)
+CREATE TABLE [USER_PROFILE] (
+    [profileID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [userID] UNIQUEIDENTIFIER NOT NULL,
+    [bio] NVARCHAR(MAX) NULL,
+    [avatarURL] VARCHAR(255) NULL,
+    [website] VARCHAR(255) NULL,
+    [displayName] NVARCHAR(255) NULL;
+    [updatedAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_UserProfile PRIMARY KEY ([profileID]),
+    CONSTRAINT UQ_UserProfile_User UNIQUE ([userID]), -- Đảm bảo tính duy nhất để tạo thành quan hệ 1-1
+    CONSTRAINT FK_UserProfile_User FOREIGN KEY ([userID]) REFERENCES [USER]([userID]) ON DELETE CASCADE
+);
+
+-- 3. TẠO BẢNG PHOTO
+CREATE TABLE [PHOTO] (
+    [photoID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [userID] UNIQUEIDENTIFIER NOT NULL,
+    [title] NVARCHAR(255) NOT NULL,
+    [description] NVARCHAR(MAX) NULL,
+    [storageKey] VARCHAR(255) NOT NULL,
+    [visibility] VARCHAR(50) NOT NULL CONSTRAINT CHK_Photo_Visibility CHECK ([visibility] IN ('PUBLIC', 'PRIVATE', 'FRIENDS_ONLY')),
+    [likeCount] INT NOT NULL DEFAULT 0,
+    [commentCount] INT NOT NULL DEFAULT 0,
+    [uploadedAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Photo PRIMARY KEY ([photoID]),
+    CONSTRAINT FK_Photo_User FOREIGN KEY ([userID]) REFERENCES [USER]([userID]) ON DELETE CASCADE
+);
+
+-- 4. TẠO BẢNG ALBUM
+CREATE TABLE [ALBUM] (
+    [albumID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [userID] UNIQUEIDENTIFIER NOT NULL,
+    [title] NVARCHAR(255) NOT NULL,
+    [coverPhotoID] VARCHAR(255) NULL, -- Định dạng string theo file thiết kế gốc
+    [visibility] VARCHAR(50) NOT NULL CONSTRAINT CHK_Album_Visibility CHECK ([visibility] IN ('PUBLIC', 'PRIVATE')),
+    [createdAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Album PRIMARY KEY ([albumID]),
+    CONSTRAINT FK_Album_User FOREIGN KEY ([userID]) REFERENCES [USER]([userID]) ON DELETE CASCADE
+);
+
+-- 5. TẠO BẢNG TRUNG GIAN: ALBUM_PHOTO
+CREATE TABLE [ALBUM_PHOTO] (
+    [albumPhotoID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [albumID] UNIQUEIDENTIFIER NOT NULL,
+    [photoID] UNIQUEIDENTIFIER NOT NULL,
+    CONSTRAINT PK_AlbumPhoto PRIMARY KEY ([albumPhotoID]),
+    CONSTRAINT FK_AlbumPhoto_Album FOREIGN KEY ([albumID]) REFERENCES [ALBUM]([albumID]) ON DELETE CASCADE,
+    CONSTRAINT FK_AlbumPhoto_Photo FOREIGN KEY ([photoID]) REFERENCES [PHOTO]([photoID]) ON DELETE NO ACTION -- Tránh tạo vòng lặp cascade delete
+);
+
+-- 6. TẠO BẢNG COMMENT
+CREATE TABLE [COMMENT] (
+    [commentID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [photoID] UNIQUEIDENTIFIER NOT NULL,
+    [userID] UNIQUEIDENTIFIER NOT NULL,
+    [parentID] UNIQUEIDENTIFIER NULL, -- Phục vụ cho comment phân cấp (Reply lồng nhau)
+    [content] NVARCHAR(MAX) NOT NULL,
+    [createdAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Comment PRIMARY KEY ([commentID]),
+    CONSTRAINT FK_Comment_Photo FOREIGN KEY ([photoID]) REFERENCES [PHOTO]([photoID]) ON DELETE CASCADE,
+    CONSTRAINT FK_Comment_User FOREIGN KEY ([userID]) REFERENCES [USER]([userID]) ON DELETE NO ACTION,
+    CONSTRAINT FK_Comment_Parent FOREIGN KEY ([parentID]) REFERENCES [COMMENT]([commentID]) ON DELETE NO ACTION
+);
+
+-- 7. TẠO BẢNG TAG
+CREATE TABLE [TAG] (
+    [tagID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [name] NVARCHAR(100) NOT NULL,
+    [usageCount] INT NOT NULL DEFAULT 0,
+    CONSTRAINT PK_Tag PRIMARY KEY ([tagID]),
+    CONSTRAINT UQ_Tag_Name UNIQUE ([name])
+);
+
+-- 8. TẠO BẢNG TRUNG GIAN: PHOTO_TAG
+CREATE TABLE [PHOTO_TAG] (
+    [photoTagID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [photoID] UNIQUEIDENTIFIER NOT NULL,
+    [tagID] UNIQUEIDENTIFIER NOT NULL,
+    CONSTRAINT PK_PhotoTag PRIMARY KEY ([photoTagID]),
+    CONSTRAINT FK_PhotoTag_Photo FOREIGN KEY ([photoID]) REFERENCES [PHOTO]([photoID]) ON DELETE CASCADE,
+    CONSTRAINT FK_PhotoTag_Tag FOREIGN KEY ([tagID]) REFERENCES [TAG]([tagID]) ON DELETE CASCADE
+);
+
+-- 9. TẠO BẢNG TRUNG GIAN: LIKE
+CREATE TABLE [LIKE] (
+    [likeID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [userID] UNIQUEIDENTIFIER NOT NULL,
+    [photoID] UNIQUEIDENTIFIER NOT NULL,
+    [createdAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Like PRIMARY KEY ([likeID]),
+    CONSTRAINT UQ_User_Photo_Like UNIQUE ([userID], [photoID]), -- Một người dùng chỉ được like một bức ảnh một lần
+    CONSTRAINT FK_Like_User FOREIGN KEY ([userID]) REFERENCES [USER]([userID]) ON DELETE CASCADE,
+    CONSTRAINT FK_Like_Photo FOREIGN KEY ([photoID]) REFERENCES [PHOTO]([photoID]) ON DELETE NO ACTION
+);
+
+-- 10. TẠO BẢNG TRUNG GIAN: FOLLOW
+CREATE TABLE [FOLLOW] (
+    [followID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [followerID] UNIQUEIDENTIFIER NOT NULL,
+    [followingID] UNIQUEIDENTIFIER NOT NULL,
+    [followedAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Follow PRIMARY KEY ([followID]),
+    CONSTRAINT UQ_Follower_Following UNIQUE ([followerID], [followingID]), -- Không được follow trùng lặp
+    CONSTRAINT CHK_Not_Self_Follow CHECK ([followerID] <> [followingID]), -- Tránh tự follow chính mình
+    CONSTRAINT FK_Follow_Follower FOREIGN KEY ([followerID]) REFERENCES [USER]([userID]) ON DELETE CASCADE,
+    CONSTRAINT FK_Follow_Following FOREIGN KEY ([followingID]) REFERENCES [USER]([userID]) ON DELETE NO ACTION
+);
+
+-- 11. TẠO BẢNG NOTIFICATION
+CREATE TABLE [NOTIFICATION] (
+    [notifID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [userID] UNIQUEIDENTIFIER NOT NULL,
+    [type] VARCHAR(50) NOT NULL CONSTRAINT CHK_Notif_Type CHECK ([type] IN ('LIKE', 'COMMENT', 'FOLLOW', 'SYSTEM')),
+    [refID] UNIQUEIDENTIFIER NULL, -- ID trỏ tới đối tượng phát sinh thông báo (photoID, commentID, v.v.)
+    [isRead] BIT NOT NULL DEFAULT 0, -- Dùng BIT thay thế cho Boolean
+    [createdAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Notification PRIMARY KEY ([notifID]),
+    CONSTRAINT FK_Notification_User FOREIGN KEY ([userID]) REFERENCES [USER]([userID]) ON DELETE CASCADE
+);
+
+-- 12. TẠO BẢNG REPORT
+CREATE TABLE [REPORT] (
+    [reportID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
+    [reporterID] UNIQUEIDENTIFIER NOT NULL,
+    [targetType] VARCHAR(50) NOT NULL CONSTRAINT CHK_Report_TargetType CHECK ([targetType] IN ('PHOTO', 'COMMENT', 'USER')),
+    [targetID] UNIQUEIDENTIFIER NOT NULL, -- ID của thực thể bị report (đa hình)
+    [reason] NVARCHAR(MAX) NOT NULL,
+    [status] VARCHAR(50) NOT NULL DEFAULT 'PENDING' CONSTRAINT CHK_Report_Status CHECK ([status] IN ('PENDING', 'RESOLVED', 'REJECTED')),
+    [createdAt] DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT PK_Report PRIMARY KEY ([reportID]),
+    CONSTRAINT FK_Report_Reporter FOREIGN KEY ([reporterID]) REFERENCES [USER]([userID]) ON DELETE CASCADE
+);

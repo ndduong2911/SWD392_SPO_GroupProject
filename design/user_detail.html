@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - User Details</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333333;
+        }
+
+        /* Top Navigation Header */
+        .admin-navbar {
+            background-color: #1e293b;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffffff;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar-menu a {
+            text-decoration: none;
+            color: #94a3b8;
+            font-size: 15px;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .navbar-menu a:hover, .navbar-menu a.active {
+            color: #ffffff;
+        }
+
+        /* Main Profile Layout Splitter */
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .workspace-card {
+            background-color: #ffffff;
+            border-radius: 6px;
+            padding: 35px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .workspace-header {
+            margin-bottom: 25px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+
+        .workspace-header h2 {
+            color: #0f172a;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        /* Split Profile Layout Structure */
+        .profile-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 40px;
+        }
+
+        /* Left Column: Avatar Card Frame */
+        .profile-avatar-sidebar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border-right: 1px solid #e2e8f0;
+            padding-right: 20px;
+        }
+
+        .large-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background-color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 42px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 15px;
+            border: 4px solid #ffffff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .user-title-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .user-title-email {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        /* Right Column: Information Identity Data Grids */
+        .profile-data-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .section-sub-title {
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-item label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .info-item .value-text {
+            font-size: 15px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        /* Status Flags Stylings inside fields */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 4px;
+            width: fit-content;
+        }
+        .status-active { background-color: #dcfce7; color: #16a34a; }
+        .status-suspended { background-color: #fee2e2; color: #dc2626; }
+
+        /* Counter widgets grid boxes */
+        .metrics-counter-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .metrics-counter-box .count-num {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        /* Interactive configuration actions row wrapper */
+        .action-control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 35px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 25px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .btn-back {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+        }
+
+        .btn-back:hover { background-color: #f1f5f9; }
+
+        .btn-action-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+            border: none;
+            color: #ffffff;
+        }
+        .btn-danger:hover { background-color: #dc2626; }
+
+        .btn-primary {
+            background-color: #3498db;
+            border: none;
+            color: #ffffff;
+        }
+        .btn-primary:hover { background-color: #2980b9; }
+
+        /* Form Controls customized for quick edits inside Details view */
+        .inline-select-control {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #334155;
+            background-color: #ffffff;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Administration Layout Nav Header Top Link Layer -->
+<nav class="admin-navbar">
+    <a href="#" class="navbar-brand">System Administration Portal</a>
+    <div class="navbar-menu">
+        <a href="settings-list.html">Master Data</a>
+        <a href="users-list.html" class="active">User Control</a>
+        <a href="moderation-queue.html">Content Tickets</a>
+    </div>
+</nav>
+
+<!-- Context Framework Workspace Body Structure -->
+<div class="container">
+    <div class="workspace-card">
+        
+        <header class="workspace-header">
+            <h2>User Profile Details</h2>
+        </header>
+
+        <div class="profile-layout">
+            
+            <!-- Left Side Element Row Components mapping identity avatars -->
+            <aside class="profile-avatar-sidebar">
+                <div class="large-avatar">JD</div>
+                <h3 class="user-title-name">john_doe</h3>
+                <p class="user-title-email">john.doe@example.com</p>
+            </aside>
+
+            <!-- Right Core Block Context Data Inputs Grid fields wrapper -->
+            <div class="profile-data-fields">
+                
+                <!-- Core Account Section -->
+                <section>
+                    <h4 class="section-sub-title">Account Base Parameters</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>User System Id</label>
+                            <span class="value-text">#101</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Current Assigned Security Role</label>
+                            <div style="margin-top: 2px;">
+                                <select class="inline-select-control" name="assigned_role">
+                                    <option value="member" selected>Member (Standard User)</option>
+                                    <option value="manager">Manager (Staff Operator)</option>
+                                    <option value="admin">Admin (Full Root Access)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-item" style="margin-top: 10px;">
+                            <label>Account Status Flag</label>
+                            <div style="margin-top: 4px;">
+                                <span class="status-badge status-active">Active Profile State</span>
+                            </div>
+                        </div>
+                        <div class="info-item" style="margin-top: 10px;">
+                            <label>Registration Date Timestamp</label>
+                            <span class="value-text" style="margin-top: 4px;">2025-11-14 08:34:21</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Statistics Metrics Block Mapping Row -->
+                <section>
+                    <h4 class="section-sub-title">Activity Statistics Summary</h4>
+                    <div class="info-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                        <div class="metrics-counter-box">
+                            <div class="count-num">42</div>
+                            <label style="font-size: 12px; color: #64748b; font-weight: 600;">Pictures Uploaded</label>
+                        </div>
+                        <div class="metrics-counter-box">
+                            <div class="count-num">128</div>
+                            <label style="font-size: 12px; color: #64748b; font-weight: 600;">Comments Written</label>
+                        </div>
+                        <div class="metrics-counter-box" style="border-color: #fca5a5; background-color: #fff5f5;">
+                            <div class="count-num" style="color: #dc2626;">0</div>
+                            <label style="font-size: 12px; color: #b91c1c; font-weight: 600;">Reports Received</label>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- Form Layout Execution Navigation Router Rows -->
+        <footer class="action-control-row">
+            <a href="users-list.html" class="btn btn-back">&lt; Return to User List</a>
+            
+            <div class="btn-action-group">
+                <!-- If account is active, show Suspend button -->
+                <button type="button" class="btn btn-danger">Suspend Account Access</button>
+                <button type="submit" class="btn btn-primary">Save Role Configuration</button>
+            </div>
+        </footer>
+
+    </div>
+</div>
+
+</body>
+</html>

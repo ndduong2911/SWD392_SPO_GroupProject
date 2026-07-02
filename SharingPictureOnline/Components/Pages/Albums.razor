@@ -1,0 +1,42 @@
+@page "/albums"
+@using SharingPictureOnline.Services
+@inject IAlbumService AlbumService
+
+<PageTitle>Albums</PageTitle>
+
+<h3>All Albums</h3>
+
+@if (albums == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!albums.Any())
+{
+    <p>No albums found.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var album in albums)
+        {
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">@album.Title</h5>
+                        <p class="card-text">Created by: @album.User.Username</p>
+                        <small class="text-muted">@album.CreatedAt.ToString("dd/MM/yyyy")</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private IEnumerable<Models.Album>? albums;
+
+    protected override async Task OnInitializedAsync()
+    {
+        albums = await AlbumService.GetAllAlbumsAsync();
+    }
+}

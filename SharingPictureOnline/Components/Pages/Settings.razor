@@ -1,0 +1,374 @@
+@page "/settings"
+@rendermode InteractiveServer
+@using SharingPictureOnline.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@inject IAuthService AuthService
+@inject IProfileService ProfileService
+@inject ICloudinaryService CloudinaryService
+@inject NavigationManager Navigation
+@inject ILogger<Settings> Logger
+
+<PageTitle>Chỉnh sửa Profile | FakePinterest</PageTitle>
+
+<div class="min-h-screen bg-slate-50">
+    @if (currentUser == null)
+    {
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600 mb-4"></i>
+                <p class="text-slate-500">Đang tải...</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <!-- Header -->
+            <div class="mb-8">
+                <button @onclick='() => Navigation.NavigateTo("/profile")' class="text-slate-600 hover:text-slate-800 mb-4 inline-flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Quay lại Profile</span>
+                </button>
+                <h1 class="text-3xl font-bold text-slate-800">Chỉnh sửa Profile</h1>
+                <p class="text-slate-500 mt-2">Cập nhật thông tin cá nhân của bạn</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>@successMessage</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <!-- Avatar Section -->
+                <div class="p-6 border-b border-slate-200">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4">Ảnh đại diện</h2>
+                    <div class="flex items-center gap-6">
+                        @if (!string.IsNullOrEmpty(currentUser.UserProfile?.AvatarUrl))
+                        {
+                            <img src="@currentUser.UserProfile.AvatarUrl" alt="Avatar" class="w-24 h-24 rounded-full object-cover shadow-lg">
+                        }
+                        else
+                        {
+                            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-fuchsia-400 to-pink-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+                                @GetUserInitial(currentUser.Username)
+                            </div>
+                        }
+                        <div>
+                            <InputFile OnChange="HandleAvatarUpload" accept="image/*" class="hidden" id="avatarUpload" />
+                            <label for="avatarUpload" class="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-medium text-sm shadow-md transition cursor-pointer inline-block">
+                                @if (isUploadingAvatar)
+                                {
+                                    <i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Đang tải...</span>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-upload mr-2"></i><span>Tải ảnh lên</span>
+                                }
+                            </label>
+                            <p class="text-sm text-slate-500 mt-2">JPG, PNG, tối đa 5MB</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Form -->
+                <EditForm Model="@profileModel" OnValidSubmit="HandleSave" FormName="EditProfileForm" class="p-6 space-y-6">
+                    <!-- Display Name -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Tên hiển thị <span class="text-slate-400 font-normal">(Display Name)</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <i class="fa-solid fa-user"></i>
+                            </span>
+                            <InputText @bind-Value="profileModel.DisplayName" 
+                                      class="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
+                                      placeholder="Nhập tên hiển thị của bạn">
+                            </InputText>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Tên này sẽ hiển thị trên trang cá nhân thay vì username</p>
+                    </div>
+
+                    <!-- Username -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Tên đăng nhập
+                        </label>
+                        <input type="text" 
+                               value="@currentUser.Username" 
+                               disabled
+                               class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed">
+                        <p class="text-xs text-slate-500 mt-1">Tên đăng nhập không thể thay đổi</p>
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Email
+                        </label>
+                        <input type="email" 
+                               value="@currentUser.Email" 
+                               disabled
+                               class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed">
+                        <p class="text-xs text-slate-500 mt-1">Email không thể thay đổi</p>
+                    </div>
+
+                    <!-- Bio -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Giới thiệu bản thân <span class="text-slate-400 font-normal">(Bio)</span>
+                        </label>
+                        <InputTextArea @bind-Value="profileModel.Bio" 
+                                      rows="4"
+                                      class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition resize-none"
+                                      placeholder="Viết vài dòng về bản thân bạn...">
+                        </InputTextArea>
+                        <p class="text-xs text-slate-500 mt-1">@(profileModel.Bio?.Length ?? 0) / 500 ký tự</p>
+                    </div>
+
+                    <!-- Website -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Website
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <i class="fa-solid fa-link"></i>
+                            </span>
+                            <InputText @bind-Value="profileModel.Website" 
+                                      class="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
+                                      placeholder="https://yourwebsite.com">
+                            </InputText>
+                        </div>
+                    </div>
+
+                    <!-- Location (Optional) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                            Vị trí
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </span>
+                            <input type="text" 
+                                   @bind="profileModel.Location"
+                                   class="w-full pl-11 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
+                                   placeholder="Hà Nội, Việt Nam">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-3 pt-4 border-t border-slate-200">
+                        <button type="submit" 
+                                disabled="@isSaving"
+                                class="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            @if (isSaving)
+                            {
+                                <i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Đang lưu...</span>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-check mr-2"></i><span>Lưu thay đổi</span>
+                            }
+                        </button>
+                        <button type="button" 
+                                @onclick='() => Navigation.NavigateTo("/profile")'
+                                class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition">
+                            Hủy
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mt-6 border border-red-200">
+                <div class="p-6">
+                    <h2 class="text-lg font-semibold text-red-600 mb-2">Vùng nguy hiểm</h2>
+                    <p class="text-slate-600 mb-4">Các hành động không thể hoàn tác</p>
+                    
+                    <div class="space-y-3">
+                        <a href="/change-password" class="block w-full md:inline-block md:w-auto px-6 py-3 bg-white hover:bg-red-50 text-red-600 border-2 border-red-300 rounded-lg font-semibold transition text-center">
+                            <i class="fa-solid fa-key mr-2"></i>Đổi mật khẩu
+                        </a>
+                        <button class="block w-full md:inline-block md:w-auto px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition ml-0 md:ml-3">
+                            <i class="fa-solid fa-trash mr-2"></i>Xóa tài khoản
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Models.User? currentUser;
+    private ProfileEditModel profileModel = new();
+    private string successMessage = "";
+    private string errorMessage = "";
+    private bool isSaving = false;
+    private bool isInitialized = false;
+    private bool isUploadingAvatar = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isInitialized)
+        {
+            isInitialized = true;
+            
+            try
+            {
+                currentUser = await AuthService.GetCurrentUserAsync();
+                
+                if (currentUser == null)
+                {
+                    Navigation.NavigateTo("/login", true);
+                    return;
+                }
+
+                // Load current profile data
+                profileModel.DisplayName = currentUser.UserProfile?.DisplayName ?? currentUser.Username;
+                profileModel.Bio = currentUser.UserProfile?.Bio ?? "";
+                profileModel.Website = currentUser.UserProfile?.Website ?? "";
+                profileModel.Location = ""; // Add location field if needed in model
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading settings");
+            }
+            finally
+            {
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+
+        try
+        {
+            if (currentUser == null) return;
+
+            Logger.LogInformation("Saving profile for user: {Username}", currentUser.Username);
+            
+            await ProfileService.UpdateProfileAsync(
+                currentUser.UserId,
+                profileModel.DisplayName,
+                profileModel.Bio,
+                profileModel.Website,
+                null // avatarUrl - will implement upload later
+            );
+            
+            successMessage = "Đã lưu thay đổi thành công!";
+            Logger.LogInformation("Profile saved successfully");
+            
+            // Auto hide success message after 3 seconds
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                await InvokeAsync(() =>
+                {
+                    successMessage = "";
+                    StateHasChanged();
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving profile");
+            errorMessage = $"Đã xảy ra lỗi: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetUserInitial(string username)
+    {
+        if (string.IsNullOrEmpty(username))
+            return "?";
+        return username.Substring(0, 1).ToUpper();
+    }
+
+    private async Task HandleAvatarUpload(InputFileChangeEventArgs e)
+    {
+        isUploadingAvatar = true;
+        errorMessage = "";
+        successMessage = "";
+
+        try
+        {
+            var file = e.File;
+            
+            if (file.Size > 5 * 1024 * 1024) // 5MB
+            {
+                errorMessage = "File quá lớn! Tối đa 5MB.";
+                return;
+            }
+
+            if (!file.ContentType.StartsWith("image/"))
+            {
+                errorMessage = "Chỉ chấp nhận file ảnh!";
+                return;
+            }
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            var avatarUrl = await CloudinaryService.UploadImageAsync(stream, file.Name);
+
+            if (currentUser != null)
+            {
+                await ProfileService.UpdateProfileAsync(
+                    currentUser.UserId,
+                    profileModel.DisplayName,
+                    profileModel.Bio,
+                    profileModel.Website,
+                    avatarUrl
+                );
+
+                // Update current user avatar
+                if (currentUser.UserProfile != null)
+                {
+                    currentUser.UserProfile.AvatarUrl = avatarUrl;
+                }
+
+                successMessage = "Đã cập nhật ảnh đại diện thành công!";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error uploading avatar");
+            errorMessage = $"Lỗi upload ảnh: {ex.Message}";
+        }
+        finally
+        {
+            isUploadingAvatar = false;
+            StateHasChanged();
+        }
+    }
+
+    public class ProfileEditModel
+    {
+        public string DisplayName { get; set; } = "";
+        public string Bio { get; set; } = "";
+        public string Website { get; set; } = "";
+        public string Location { get; set; } = "";
+    }
+}

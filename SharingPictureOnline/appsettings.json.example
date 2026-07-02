@@ -1,0 +1,17 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": { 
+    "MyCnn": "Data Source=YOUR_SERVER\\SQLEXPRESS;Initial Catalog=SPO; Trusted_Connection=SSPI;Encrypt=false;TrustServerCertificate=true" 
+  },
+  "Cloudinary": {
+    "CloudName": "YOUR_CLOUD_NAME",
+    "ApiKey": "YOUR_API_KEY",
+    "ApiSecret": "YOUR_API_SECRET"
+  }
+}

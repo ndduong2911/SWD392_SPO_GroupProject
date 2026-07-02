@@ -1,0 +1,280 @@
+@page "/profile"
+@page "/profile/{Username}"
+@rendermode InteractiveServer
+@using SharingPictureOnline.Services
+@using Microsoft.Extensions.Logging
+@inject IAuthService AuthService
+@inject IPhotoService PhotoService
+@inject IAlbumService AlbumService
+@inject NavigationManager Navigation
+@inject ILogger<Profile> Logger
+
+<PageTitle>@(profileUser?.Username ?? "Profile") | FakePinterest</PageTitle>
+
+@if (profileUser == null)
+{
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600 mb-4"></i>
+            <p class="text-slate-500">Đang tải profile...</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="bg-slate-50 min-h-screen">
+        <!-- Profile Header -->
+        <div class="bg-white shadow-sm">
+            <div class="max-w-6xl mx-auto px-4 py-8">
+                <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+                    <!-- Avatar -->
+                    <div class="flex-shrink-0">
+                        <div class="w-32 h-32 rounded-full bg-gradient-to-br from-fuchsia-400 to-pink-600 flex items-center justify-center text-white text-5xl font-bold shadow-xl">
+                            @GetUserInitial(profileUser.Username)
+                        </div>
+                    </div>
+
+                    <!-- Profile Info -->
+                    <div class="flex-1 text-center md:text-left">
+                        <div class="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+                            <div>
+                                <h1 class="text-3xl font-bold text-slate-800">
+                                    @(profileUser.UserProfile?.DisplayName ?? profileUser.Username)
+                                </h1>
+                                @if (!string.IsNullOrEmpty(profileUser.UserProfile?.DisplayName))
+                                {
+                                    <p class="text-slate-500 text-sm">@("@" + profileUser.Username)</p>
+                                }
+                            </div>
+                            @if (isOwnProfile)
+                            {
+                                <a href="/settings" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium text-sm transition inline-flex items-center gap-2">
+                                    <i class="fa-solid fa-pen"></i>
+                                    <span>Chỉnh sửa profile</span>
+                                </a>
+                            }
+                            else
+                            {
+                                <button class="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold text-sm transition shadow-md">
+                                    <i class="fa-solid fa-user-plus mr-2"></i>Theo dõi
+                                </button>
+                            }
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="flex items-center justify-center md:justify-start gap-6 mb-4">
+                            <div class="text-center">
+                                <span class="block text-2xl font-bold text-slate-800">@userPhotos.Count()</span>
+                                <span class="text-sm text-slate-500">photos</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl font-bold text-slate-800">@userAlbums.Count()</span>
+                                <span class="text-sm text-slate-500">albums</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl font-bold text-slate-800">0</span>
+                                <span class="text-sm text-slate-500">followers</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-2xl font-bold text-slate-800">0</span>
+                                <span class="text-sm text-slate-500">following</span>
+                            </div>
+                        </div>
+
+                        <!-- Bio -->
+                        @if (!string.IsNullOrEmpty(profileUser.UserProfile?.Bio))
+                        {
+                            <p class="text-slate-600 leading-relaxed max-w-2xl">
+                                @profileUser.UserProfile.Bio
+                            </p>
+                        }
+                        else if (isOwnProfile)
+                        {
+                            <p class="text-slate-400 italic">
+                                Thêm bio để chia sẻ về bản thân bạn...
+                            </p>
+                        }
+
+                        <!-- Website -->
+                        @if (!string.IsNullOrEmpty(profileUser.UserProfile?.Website))
+                        {
+                            <div class="mt-3">
+                                <a href="@profileUser.UserProfile.Website" target="_blank" class="text-fuchsia-600 hover:text-fuchsia-700 font-medium inline-flex items-center gap-2">
+                                    <i class="fa-solid fa-link"></i>
+                                    <span>@profileUser.UserProfile.Website</span>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white border-b border-slate-200 sticky top-16 z-30">
+            <div class="max-w-6xl mx-auto px-4">
+                <div class="flex gap-8">
+                    <button @onclick='() => activeTab = "photos"' 
+                            class="py-4 font-semibold text-sm transition border-b-2 @(activeTab == "photos" ? "text-fuchsia-600 border-fuchsia-600" : "text-slate-500 border-transparent hover:text-slate-700")">
+                        <i class="fa-solid fa-images mr-2"></i>My Photos
+                    </button>
+                    <button @onclick='() => activeTab = "albums"' 
+                            class="py-4 font-semibold text-sm transition border-b-2 @(activeTab == "albums" ? "text-fuchsia-600 border-fuchsia-600" : "text-slate-500 border-transparent hover:text-slate-700")">
+                        <i class="fa-solid fa-folder mr-2"></i>My Albums
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="max-w-6xl mx-auto px-4 py-8">
+            @if (activeTab == "photos")
+            {
+                @if (userPhotos.Any())
+                {
+                    <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+                        @foreach (var photo in userPhotos)
+                        {
+                            <div class="break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm bg-slate-200 hover:shadow-xl transition cursor-pointer">
+                                <img src="@photo.StorageKey" alt="@photo.Title" class="w-full object-cover">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition p-4 flex flex-col justify-end">
+                                    <p class="text-white font-semibold">@photo.Title</p>
+                                    <div class="flex items-center gap-3 mt-2 text-white text-sm">
+                                        <span><i class="fa-solid fa-heart mr-1"></i>@photo.LikeCount</span>
+                                        <span><i class="fa-solid fa-comment mr-1"></i>@photo.CommentCount</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-20">
+                        <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-camera text-4xl text-slate-300"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-slate-800 mb-2">Chưa có ảnh nào</h3>
+                        @if (isOwnProfile)
+                        {
+                            <p class="text-slate-500 mb-4">Hãy bắt đầu chia sẻ ảnh của bạn!</p>
+                            <button class="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold shadow-md transition">
+                                <i class="fa-solid fa-upload mr-2"></i>Upload ảnh đầu tiên
+                            </button>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                @if (userAlbums.Any())
+                {
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        @foreach (var album in userAlbums)
+                        {
+                            <div class="bg-white rounded-xl shadow-sm hover:shadow-lg transition cursor-pointer overflow-hidden group">
+                                <div class="aspect-video bg-gradient-to-br from-fuchsia-100 to-pink-100 flex items-center justify-center">
+                                    <i class="fa-solid fa-folder-open text-6xl text-fuchsia-300 group-hover:scale-110 transition"></i>
+                                </div>
+                                <div class="p-4">
+                                    <h3 class="font-semibold text-slate-800 mb-1">@album.Title</h3>
+                                    <p class="text-sm text-slate-500">0 photos</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-20">
+                        <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-folder text-4xl text-slate-300"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-slate-800 mb-2">Chưa có album nào</h3>
+                        @if (isOwnProfile)
+                        {
+                            <p class="text-slate-500 mb-4">Tạo album để tổ chức ảnh của bạn!</p>
+                            <button class="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold shadow-md transition">
+                                <i class="fa-solid fa-plus mr-2"></i>Tạo album mới
+                            </button>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Username { get; set; }
+
+    private Models.User? profileUser;
+    private Models.User? currentUser;
+    private bool isOwnProfile = false;
+    private string activeTab = "photos";
+    private List<Models.Photo> userPhotos = new();
+    private List<Models.Album> userAlbums = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadProfile();
+        }
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            currentUser = await AuthService.GetCurrentUserAsync();
+            
+            // Nếu không có username parameter, hiển thị profile của user hiện tại
+            if (string.IsNullOrEmpty(Username))
+            {
+                if (currentUser == null)
+                {
+                    Navigation.NavigateTo("/login", true);
+                    return;
+                }
+                profileUser = currentUser;
+                isOwnProfile = true;
+            }
+            else
+            {
+                // TODO: Load user by username
+                if (currentUser == null)
+                {
+                    Navigation.NavigateTo("/login", true);
+                    return;
+                }
+                profileUser = currentUser;
+                isOwnProfile = currentUser.Username == Username;
+            }
+
+            if (profileUser != null)
+            {
+                // Load user's photos and albums
+                userPhotos = (await PhotoService.GetPhotosByUserIdAsync(profileUser.UserId)).ToList();
+                userAlbums = (await AlbumService.GetAllAlbumsAsync())
+                    .Where(a => a.UserId == profileUser.UserId).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading profile");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private string GetUserInitial(string username)
+    {
+        if (string.IsNullOrEmpty(username))
+            return "?";
+        return username.Substring(0, 1).ToUpper();
+    }
+}

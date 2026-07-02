@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing Pictures System - Ticket Investigation</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f6f9; color: #333333; }
+        
+        .admin-navbar { background-color: #1e293b; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; color: #ffffff; }
+        .navbar-brand { font-size: 20px; font-weight: 700; color: #3498db; text-decoration: none; }
+
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        .workspace-card { background-color: #ffffff; border-radius: 6px; padding: 35px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .workspace-header { margin-bottom: 25px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; }
+        .workspace-header h2 { color: #0f172a; font-size: 22px; font-weight: 700; }
+
+        .ticket-split-layout { display: grid; grid-template-columns: 400px 1fr; gap: 35px; }
+        
+        /* Bằng chứng trực quan bên trái */
+        .evidence-panel { display: flex; flex-direction: column; gap: 12px; }
+        .evidence-title { font-size: 14px; font-weight: 600; color: #475569; }
+        .mock-image-container { width: 100%; height: 280px; background-color: #e2e8f0; border-radius: 6px; border: 1px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #64748b; font-weight: 600; }
+
+        /* Biểu mẫu và thông tin bên phải */
+        .investigation-panel { display: flex; flex-direction: column; gap: 20px; }
+        .meta-group-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .meta-item label { display: block; font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 2px; }
+        .meta-item span { font-size: 14px; color: #1e293b; font-weight: 500; }
+
+        .report-reason-text { background-color: #fff5f5; border-left: 4px solid #ef4444; padding: 12px; font-size: 14px; color: #7f1d1d; border-radius: 0 4px 4px 0; }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 14px; font-weight: 600; color: #475569; }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; color: #334155; }
+        
+        .radio-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; }
+        .radio-option { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: #334155; cursor: pointer; }
+
+        .action-control-row { display: flex; justify-content: space-between; align-items: center; margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 25px; }
+        .btn { padding: 10px 20px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .btn-back { background-color: #ffffff; border: 1px solid #cbd5e1; color: #475569; }
+        .btn-submit { background-color: #e74c3c; border: none; color: #ffffff; }
+        .btn-submit:hover { background-color: #c0392b; }
+    </style>
+</head>
+<body>
+
+<nav class="admin-navbar">
+    <a href="moderation-queue.html" class="navbar-brand">System Administration Portal</a>
+</nav>
+
+<div class="container">
+    <div class="workspace-card">
+        <header class="workspace-header">
+            <h2>Violation Ticket Detail (#TK-8041)</h2>
+        </header>
+
+        <div class="ticket-split-layout">
+            
+            <!-- Left: Content Under Review -->
+            <div class="evidence-panel">
+                <span class="evidence-title">Reported Media File Evidence</span>
+                <div class="mock-image-container">
+                    [ Large Picture Preview Area ]
+                    <br>Sunset_Party.jpg
+                </div>
+                <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
+                    <strong>File Metadata:</strong> 4.2 MB, Resolution 3840x2160.<br>
+                    <strong>MD5 Hash:</strong> 8f9a2c3b4e5f6a7b8c9d0e1f
+                </div>
+            </div>
+
+            <!-- Right: Context Details & Resolution Form -->
+            <div class="investigation-panel">
+                
+                <div class="meta-group-box">
+                    <div class="meta-item">
+                        <label>Content Author (Uploader)</label>
+                        <span>creator_99 (#USR-552)</span>
+                    </div>
+                    <div class="meta-item">
+                        <label>Reporter Entity</label>
+                        <span>user_uvw (#USR-911)</span>
+                    </div>
+                    <div class="meta-item">
+                        <label>Ticket Opened Timestamp</label>
+                        <span>2026-06-20 14:22:05</span>
+                    </div>
+                    <div class="meta-item">
+                        <label>Initial Risk Assessment</label>
+                        <span style="color: #dc2626; font-weight: 700;">High Severity</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Reporter's Violation Description Statement</label>
+                    <div class="report-reason-text">
+                        "This user re-uploaded my copyrighted photography artwork from my personal portfolio platform without obtaining any explicit commercial license or giving appropriate attribution tokens."
+                    </div>
+                </div>
+
+                <form action="#" method="POST" style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Resolution Strategy Options -->
+                    <div class="form-group">
+                        <label>Execution Verdict Decision <span>*</span></label>
+                        <div class="radio-stack">
+                            <label class="radio-option">
+                                <input type="radio" name="verdict" value="dismiss" checked>
+                                <div><strong>Dismiss Ticket:</strong> Content does not breach rules. Retain media visibility.</div>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="verdict" value="remove">
+                                <div><strong>Delete Picture Content:</strong> Wipe image permanently from the shared repository due to explicit copyright breach.</div>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="verdict" value="ban">
+                                <div><strong>Delete Picture & Suspend Creator Account:</strong> Wipe content and immediately transition author profile state to Suspended.</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Moderator Internal Log Notes -->
+                    <div class="form-group">
+                        <label for="mod-notes">Internal Processing Resolution Log</label>
+                        <textarea id="mod-notes" name="mod_notes" class="form-control" style="resize: vertical; min-height: 80px;" placeholder="Document your audit trail reasoning or standard operational verification notes here..."></textarea>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+        <footer class="action-control-row">
+            <a href="moderation-queue.html" class="btn btn-back">&lt; Return to Queue</a>
+            <button type="submit" class="btn btn-submit">Resolve & Close Ticket</button>
+        </footer>
+
+    </div>
+</div>
+
+</body>
+</html>

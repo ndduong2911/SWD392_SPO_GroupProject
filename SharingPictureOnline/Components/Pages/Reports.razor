@@ -1,0 +1,53 @@
+@page "/reports"
+@using SharingPictureOnline.Services
+@inject IModerationService ModerationService
+
+<PageTitle>Reports</PageTitle>
+
+<h3>Moderation Reports</h3>
+
+@if (reports == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Report ID</th>
+                <th>Reporter</th>
+                <th>Reason</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var report in reports)
+            {
+                <tr>
+                    <td>@report.ReportId</td>
+                    <td>@report.Reporter?.Username</td>
+                    <td>@report.Reason</td>
+                    <td>
+                        <button class="btn btn-sm btn-success" @onclick="() => ResolveReport(report.ReportId)">Resolve</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IEnumerable<Models.Report>? reports;
+
+    protected override async Task OnInitializedAsync()
+    {
+        reports = await ModerationService.GetAllReportsAsync();
+    }
+
+    private async Task ResolveReport(Guid reportId)
+    {
+        await ModerationService.ResolveReportAsync(reportId);
+        reports = await ModerationService.GetAllReportsAsync();
+    }
+}
