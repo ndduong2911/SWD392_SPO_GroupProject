@@ -57,13 +57,11 @@
                     <div class="flex items-center gap-6">
                         @if (!string.IsNullOrEmpty(currentUser.UserProfile?.AvatarUrl))
                         {
-                            <img src="@currentUser.UserProfile.AvatarUrl" alt="Avatar" class="w-24 h-24 rounded-full object-cover shadow-lg">
+                            <img src="@currentUser.UserProfile.AvatarUrl" alt="Avatar" class="w-24 h-24 rounded-full object-cover shadow-lg border-2 border-slate-200">
                         }
                         else
                         {
-                            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-fuchsia-400 to-pink-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-                                @GetUserInitial(currentUser.Username)
-                            </div>
+                            <img src="/images/default-avatar.svg" alt="Default Avatar" class="w-24 h-24 rounded-full object-cover shadow-lg border-2 border-slate-200 bg-slate-100">
                         }
                         <div>
                             <InputFile OnChange="HandleAvatarUpload" accept="image/*" class="hidden" id="avatarUpload" />
@@ -331,7 +329,7 @@
             }
 
             using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-            var avatarUrl = await CloudinaryService.UploadImageAsync(stream, file.Name);
+            var avatarUrl = await CloudinaryService.UploadAvatarAsync(stream, file.Name);
 
             if (currentUser != null)
             {

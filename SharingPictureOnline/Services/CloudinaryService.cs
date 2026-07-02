@@ -27,6 +27,34 @@ public class CloudinaryService : ICloudinaryService
             var uploadParams = new ImageUploadParams()
             {
                 File = new FileDescription(fileName, imageStream),
+                Folder = "photos",
+                Transformation = new Transformation().Width(1200).Height(1200).Crop("limit").Quality("auto")
+            };
+
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+            if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                return uploadResult.SecureUrl.ToString();
+            }
+
+            _logger.LogError("Cloudinary upload failed: {Error}", uploadResult.Error?.Message);
+            throw new Exception($"Upload failed: {uploadResult.Error?.Message}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading image to Cloudinary");
+            throw;
+        }
+    }
+
+    public async Task<string> UploadAvatarAsync(Stream imageStream, string fileName)
+    {
+        try
+        {
+            var uploadParams = new ImageUploadParams()
+            {
+                File = new FileDescription(fileName, imageStream),
                 Folder = "avatars",
                 Transformation = new Transformation().Width(500).Height(500).Crop("fill").Gravity("face")
             };
@@ -43,7 +71,7 @@ public class CloudinaryService : ICloudinaryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading image to Cloudinary");
+            _logger.LogError(ex, "Error uploading avatar to Cloudinary");
             throw;
         }
     }

@@ -29,9 +29,14 @@ else
                 <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
                     <!-- Avatar -->
                     <div class="flex-shrink-0">
-                        <div class="w-32 h-32 rounded-full bg-gradient-to-br from-fuchsia-400 to-pink-600 flex items-center justify-center text-white text-5xl font-bold shadow-xl">
-                            @GetUserInitial(profileUser.Username)
-                        </div>
+                        @if (!string.IsNullOrEmpty(profileUser.UserProfile?.AvatarUrl))
+                        {
+                            <img src="@profileUser.UserProfile.AvatarUrl" alt="@profileUser.Username" class="w-32 h-32 rounded-full object-cover shadow-xl border-4 border-white">
+                        }
+                        else
+                        {
+                            <img src="/images/default-avatar.svg" alt="Default Avatar" class="w-32 h-32 rounded-full object-cover shadow-xl border-4 border-white bg-slate-200">
+                        }
                     </div>
 
                     <!-- Profile Info -->
@@ -158,9 +163,9 @@ else
                         @if (isOwnProfile)
                         {
                             <p class="text-slate-500 mb-4">Hãy bắt đầu chia sẻ ảnh của bạn!</p>
-                            <button class="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold shadow-md transition">
+                            <a href="/upload" class="inline-block px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold shadow-md transition">
                                 <i class="fa-solid fa-upload mr-2"></i>Upload ảnh đầu tiên
-                            </button>
+                            </a>
                         }
                     </div>
                 }
@@ -194,8 +199,8 @@ else
                         @if (isOwnProfile)
                         {
                             <p class="text-slate-500 mb-4">Tạo album để tổ chức ảnh của bạn!</p>
-                            <button class="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold shadow-md transition">
-                                <i class="fa-solid fa-plus mr-2"></i>Tạo album mới
+                            <button disabled class="px-6 py-3 bg-slate-400 text-white rounded-lg font-semibold shadow-md cursor-not-allowed">
+                                <i class="fa-solid fa-plus mr-2"></i>Tạo album mới (Coming soon)
                             </button>
                         }
                     </div>
@@ -269,12 +274,5 @@ else
         {
             StateHasChanged();
         }
-    }
-
-    private string GetUserInitial(string username)
-    {
-        if (string.IsNullOrEmpty(username))
-            return "?";
-        return username.Substring(0, 1).ToUpper();
     }
 }

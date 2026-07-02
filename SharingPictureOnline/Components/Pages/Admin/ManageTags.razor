@@ -1,0 +1,243 @@
+@page "/admin/tags"
+@rendermode InteractiveServer
+@using SharingPictureOnline.Services
+@using SharingPictureOnline.Models
+@inject IAuthService AuthService
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+
+<PageTitle>Quản Lý Tags | Admin</PageTitle>
+
+<div class="min-h-screen bg-slate-50">
+    @if (currentUser?.Role != "ADMIN")
+    {
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <i class="fa-solid fa-ban text-4xl text-red-600 mb-4"></i>
+                <p class="text-slate-700 font-semibold">Bạn không có quyền truy cập trang này</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="max-w-6xl mx-auto px-4 py-8">
+            <div class="mb-8 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800">Quản Lý Tags</h1>
+                    <p class="text-slate-500 mt-2">Quản lý các tag cho ảnh</p>
+                </div>
+                <button @onclick='() => Navigation.NavigateTo("/admin")' 
+                        class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>Quay lại
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="@(isError ? "bg-red-50 border-red-200 text-red-700" : "bg-green-50 border-green-200 text-green-700") border px-4 py-3 rounded-lg mb-6">
+                    @message
+                </div>
+            }
+
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">Thêm Tag Mới</h2>
+                <div class="flex gap-3">
+                    <input type="text" @bind="newTagName" @onkeypress="HandleKeyPress"
+                           placeholder="Nhập tên tag..."
+                           class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                    <button @onclick="CreateTag" 
+                            disabled="@(string.IsNullOrWhiteSpace(newTagName))"
+                            class="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition">
+                        <i class="fa-solid fa-plus mr-2"></i>Thêm Tag
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-200">
+                    <input type="text" @bind="searchQuery" @bind:event="oninput"
+                           placeholder="Tìm kiếm tag..."
+                           class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Tên Tag</th>
+                                <th class="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Số lần sử dụng</th>
+                                <th class="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            @foreach (var tag in FilteredTags)
+                            {
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-6 py-4">
+                                        @if (editingTagId == tag.TagId)
+                                        {
+                                            <input type="text" @bind="editingTagName"
+                                                   class="px-3 py-1 border border-slate-300 rounded-lg w-full">
+                                        }
+                                        else
+                                        {
+                                            <div class="flex items-center gap-2">
+                                                <i class="fa-solid fa-hashtag text-fuchsia-600"></i>
+                                                <span class="font-semibold text-slate-800">@tag.Name</span>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-semibold">
+                                            @tag.UsageCount
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center justify-center gap-2">
+                                            @if (editingTagId == tag.TagId)
+                                            {
+                                                <button @onclick="SaveTag" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm">
+                                                    <i class="fa-solid fa-check"></i>
+                                                </button>
+                                                <button @onclick="CancelEdit" class="px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white rounded text-sm">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button @onclick="() => StartEditTag(tag)" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">
+                                                    <i class="fa-solid fa-pen"></i>
+                                                </button>
+                                                <button @onclick="() => DeleteTag(tag.TagId)" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (!FilteredTags.Any())
+                {
+                    <div class="p-12 text-center text-slate-500">
+                        <i class="fa-solid fa-tags text-4xl mb-4"></i>
+                        <p>Không tìm thấy tag nào</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private User? currentUser;
+    private List<Tag> tags = new();
+    private string searchQuery = "";
+    private string message = "";
+    private bool isError = false;
+    
+    private string newTagName = "";
+    private Guid? editingTagId;
+    private string editingTagName = "";
+
+    private IEnumerable<Tag> FilteredTags => tags.Where(t =>
+        string.IsNullOrEmpty(searchQuery) || 
+        t.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+    );
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await AuthService.GetCurrentUserAsync();
+        
+        if (currentUser?.Role != "ADMIN")
+        {
+            Navigation.NavigateTo("/", true);
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        tags = await AdminService.GetAllTagsAsync();
+    }
+
+    private async Task CreateTag()
+    {
+        if (string.IsNullOrWhiteSpace(newTagName)) return;
+
+        try
+        {
+            await AdminService.CreateTagAsync(newTagName);
+            message = "Thêm tag thành công!";
+            isError = false;
+            newTagName = "";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            message = $"Lỗi: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private void StartEditTag(Tag tag)
+    {
+        editingTagId = tag.TagId;
+        editingTagName = tag.Name;
+    }
+
+    private async Task SaveTag()
+    {
+        if (editingTagId.HasValue && !string.IsNullOrWhiteSpace(editingTagName))
+        {
+            try
+            {
+                await AdminService.UpdateTagAsync(editingTagId.Value, editingTagName);
+                message = "Cập nhật tag thành công!";
+                isError = false;
+                editingTagId = null;
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                message = $"Lỗi: {ex.Message}";
+                isError = true;
+            }
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingTagId = null;
+        editingTagName = "";
+    }
+
+    private async Task DeleteTag(Guid tagId)
+    {
+        try
+        {
+            await AdminService.DeleteTagAsync(tagId);
+            message = "Xóa tag thành công!";
+            isError = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            message = $"Lỗi: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await CreateTag();
+        }
+    }
+}

@@ -13,6 +13,17 @@
             @if (isAuthenticated && currentUser != null)
             {
                 <div class="flex items-center gap-4">
+                    @if (currentUser.Role == "ADMIN")
+                    {
+                        <a href="/admin" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium text-sm shadow-sm transition inline-flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>Admin</span>
+                        </a>
+                    }
+                    <a href="/upload" class="px-4 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-medium text-sm shadow-sm transition inline-flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Upload</span>
+                    </a>
                     <button class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
                         <i class="fa-solid fa-bell text-slate-600"></i>
                     </button>
@@ -35,7 +46,36 @@
                                 <div class="px-4 py-3 border-b border-slate-200">
                                     <p class="text-sm font-semibold text-slate-800">@currentUser.Username</p>
                                     <p class="text-xs text-slate-500">@currentUser.Email</p>
+                                    @if (currentUser.Role == "ADMIN")
+                                    {
+                                        <span class="inline-block mt-1 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-semibold">
+                                            <i class="fa-solid fa-crown mr-1"></i>ADMIN
+                                        </span>
+                                    }
+                                    else if (currentUser.Role == "MODERATOR")
+                                    {
+                                        <span class="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                                            <i class="fa-solid fa-shield-halved mr-1"></i>MODERATOR
+                                        </span>
+                                    }
                                 </div>
+                                @if (currentUser.Role == "ADMIN")
+                                {
+                                    <div class="border-b border-slate-200 pb-2 mb-2">
+                                        <a href="/admin" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-semibold">
+                                            <i class="fa-solid fa-shield-halved mr-2"></i>Admin Dashboard
+                                        </a>
+                                        <a href="/admin/accounts" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 pl-10">
+                                            <i class="fa-solid fa-users mr-2 text-xs"></i>Tài khoản
+                                        </a>
+                                        <a href="/admin/tags" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 pl-10">
+                                            <i class="fa-solid fa-tags mr-2 text-xs"></i>Tags
+                                        </a>
+                                        <a href="/admin/settings" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 pl-10">
+                                            <i class="fa-solid fa-cog mr-2 text-xs"></i>Cài đặt
+                                        </a>
+                                    </div>
+                                }
                                 <a href="/profile" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
                                     <i class="fa-solid fa-user mr-2"></i>Trang cá nhân
                                 </a>

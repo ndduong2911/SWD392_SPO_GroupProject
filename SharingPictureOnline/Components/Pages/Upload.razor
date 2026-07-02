@@ -1,0 +1,382 @@
+@page "/upload"
+@rendermode InteractiveServer
+@using SharingPictureOnline.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@inject IAuthService AuthService
+@inject IPhotoService PhotoService
+@inject ICloudinaryService CloudinaryService
+@inject NavigationManager Navigation
+@inject ILogger<Upload> Logger
+
+<PageTitle>Upload Ảnh | FakePinterest</PageTitle>
+
+<div class="min-h-screen bg-slate-50">
+    @if (currentUser == null)
+    {
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600 mb-4"></i>
+                <p class="text-slate-500">Đang tải...</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-slate-800">Upload Ảnh</h1>
+                <p class="text-slate-500 mt-2">Chia sẻ ảnh đẹp của bạn với cộng đồng</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>@successMessage</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-6">
+                    <EditForm Model="@uploadModel" OnValidSubmit="HandleUpload" FormName="UploadPhotoForm">
+                        <!-- Image Upload Area -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-slate-700 mb-3">
+                                Chọn ảnh <span class="text-red-500">*</span>
+                            </label>
+                            
+                            @if (selectedFile == null)
+                            {
+                                <div class="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center hover:border-fuchsia-500 transition cursor-pointer bg-slate-50">
+                                    <InputFile OnChange="HandleFileSelected" accept="image/*" class="hidden" id="photoUpload" />
+                                    <label for="photoUpload" class="cursor-pointer">
+                                        <div class="w-20 h-20 bg-fuchsia-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <i class="fa-solid fa-cloud-arrow-up text-4xl text-fuchsia-600"></i>
+                                        </div>
+                                        <p class="text-slate-700 font-medium mb-2">Nhấn để chọn ảnh hoặc kéo thả vào đây</p>
+                                        <p class="text-sm text-slate-500">JPG, PNG, GIF - Tối đa 10MB</p>
+                                    </label>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="space-y-4">
+                                    <!-- Image Preview -->
+                                    @if (!string.IsNullOrEmpty(imagePreviewUrl))
+                                    {
+                                        <div class="border-2 border-fuchsia-500 rounded-xl overflow-hidden bg-slate-100">
+                                            <img src="@imagePreviewUrl" alt="Preview" class="w-full h-auto max-h-96 object-contain" />
+                                        </div>
+                                    }
+                                    
+                                    <!-- File Info -->
+                                    <div class="border-2 border-fuchsia-500 rounded-xl p-6 bg-fuchsia-50">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-4">
+                                                <div class="w-16 h-16 bg-fuchsia-100 rounded-lg flex items-center justify-center">
+                                                    <i class="fa-solid fa-file-image text-3xl text-fuchsia-600"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="font-semibold text-slate-800">@selectedFileName</p>
+                                                    <p class="text-sm text-slate-500">@FormatFileSize(selectedFile!.Size)</p>
+                                                </div>
+                                            </div>
+                                            <button type="button" 
+                                                    @onclick="ClearImage"
+                                                    class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition flex items-center justify-center">
+                                                <i class="fa-solid fa-xmark text-xl"></i>
+                                            </button>
+                                        </div>
+                                        <div class="mt-4 pt-4 border-t border-fuchsia-200">
+                                            <p class="text-sm text-green-600 flex items-center gap-2">
+                                                <i class="fa-solid fa-circle-check"></i>
+                                                <span>File đã được chọn và sẵn sàng upload</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Title -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                Tiêu đề <span class="text-red-500">*</span>
+                            </label>
+                            <InputText @bind-Value="uploadModel.Title" 
+                                      class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
+                                      placeholder="Nhập tiêu đề cho ảnh của bạn">
+                            </InputText>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                Mô tả
+                            </label>
+                            <InputTextArea @bind-Value="uploadModel.Description" 
+                                          rows="4"
+                                          class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition resize-none"
+                                          placeholder="Viết mô tả về bức ảnh...">
+                            </InputTextArea>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                Tags <span class="text-slate-400 font-normal">(phân cách bằng dấu phẩy)</span>
+                            </label>
+                            <InputText @bind-Value="uploadModel.Tags" 
+                                      class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition"
+                                      placeholder="vd: nature, landscape, mountain">
+                            </InputText>
+                            <p class="text-xs text-slate-500 mt-1">Tags giúp người khác dễ tìm thấy ảnh của bạn</p>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center gap-3 pt-4 border-t border-slate-200">
+                            <button type="submit" 
+                                    disabled="@(isUploading || selectedFile == null)"
+                                    class="px-6 py-3 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                @if (isUploading)
+                                {
+                                    <i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Đang upload...</span>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-upload mr-2"></i><span>Upload ảnh</span>
+                                }
+                            </button>
+                            <button type="button" 
+                                    @onclick='() => Navigation.NavigateTo("/")'
+                                    class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition">
+                                Hủy
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Upload Progress -->
+            @if (isUploading)
+            {
+                <div class="mt-6 bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-4 mb-3">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl text-fuchsia-600"></i>
+                        <div class="flex-1">
+                            <p class="font-semibold text-slate-800">Đang upload ảnh...</p>
+                            <p class="text-sm text-slate-500">Vui lòng chờ trong giây lát</p>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div class="bg-fuchsia-600 h-2 rounded-full animate-pulse" style="width: 70%"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private Models.User? currentUser;
+    private PhotoUploadModel uploadModel = new();
+    private string successMessage = "";
+    private string errorMessage = "";
+    private bool isUploading = false;
+    private bool isInitialized = false;
+    private IBrowserFile? selectedFile;
+    private string? selectedFileName;
+    private string? imagePreviewUrl;
+    private byte[]? imageData;
+    private string? imageContentType;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isInitialized)
+        {
+            isInitialized = true;
+            
+            try
+            {
+                currentUser = await AuthService.GetCurrentUserAsync();
+                
+                if (currentUser == null)
+                {
+                    Navigation.NavigateTo("/login", true);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading upload page");
+            }
+            finally
+            {
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        errorMessage = "";
+        selectedFile = e.File;
+        selectedFileName = selectedFile.Name;
+
+        try
+        {
+            if (selectedFile.Size > 10 * 1024 * 1024) // 10MB
+            {
+                errorMessage = "File quá lớn! Tối đa 10MB.";
+                selectedFile = null;
+                selectedFileName = null;
+                return;
+            }
+
+            if (!selectedFile.ContentType.StartsWith("image/"))
+            {
+                errorMessage = "Chỉ chấp nhận file ảnh!";
+                selectedFile = null;
+                selectedFileName = null;
+                return;
+            }
+
+            // Đọc file ngay lập tức để tránh lỗi _blazorFilesById
+            using var stream = selectedFile.OpenReadStream(10 * 1024 * 1024);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            imageData = memoryStream.ToArray();
+            imageContentType = selectedFile.ContentType;
+
+            // Tạo preview URL
+            var base64 = Convert.ToBase64String(imageData);
+            imagePreviewUrl = $"data:{imageContentType};base64,{base64}";
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error reading file");
+            errorMessage = $"Lỗi đọc file: {ex.Message}";
+            selectedFile = null;
+            selectedFileName = null;
+            imageData = null;
+            imagePreviewUrl = null;
+            StateHasChanged();
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private void ClearImage()
+    {
+        selectedFile = null;
+        selectedFileName = null;
+        imageData = null;
+        imagePreviewUrl = null;
+        imageContentType = null;
+        errorMessage = "";
+    }
+
+    private async Task HandleUpload()
+    {
+        if (imageData == null || currentUser == null)
+        {
+            errorMessage = "Vui lòng chọn ảnh!";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(uploadModel.Title))
+        {
+            errorMessage = "Vui lòng nhập tiêu đề!";
+            return;
+        }
+
+        isUploading = true;
+        errorMessage = "";
+        successMessage = "";
+
+        try
+        {
+            Logger.LogInformation("Starting upload for user: {Username}", currentUser.Username);
+
+            // Upload to Cloudinary từ byte array
+            using var stream = new MemoryStream(imageData);
+            var imageUrl = await CloudinaryService.UploadImageAsync(stream, selectedFileName!);
+
+            Logger.LogInformation("Image uploaded to Cloudinary: {Url}", imageUrl);
+
+            // Save to database
+            var photo = new Models.Photo
+            {
+                PhotoId = Guid.NewGuid(),
+                UserId = currentUser.UserId,
+                Title = uploadModel.Title,
+                Description = uploadModel.Description,
+                StorageKey = imageUrl,
+                UploadedAt = DateTime.UtcNow,
+                Visibility = "public",
+                LikeCount = 0,
+                CommentCount = 0
+            };
+
+            await PhotoService.CreatePhotoAsync(photo);
+
+            Logger.LogInformation("Photo saved to database: {PhotoId}", photo.PhotoId);
+
+            successMessage = "Upload thành công!";
+            
+            // Reset form
+            uploadModel = new();
+            ClearImage();
+
+            // Redirect after 2 seconds
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2000);
+                await InvokeAsync(() =>
+                {
+                    Navigation.NavigateTo("/profile", true);
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error uploading photo");
+            errorMessage = $"Lỗi upload: {ex.Message}";
+        }
+        finally
+        {
+            isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    public class PhotoUploadModel
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Tags { get; set; } = "";
+    }
+}

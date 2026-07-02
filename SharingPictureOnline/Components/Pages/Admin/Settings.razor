@@ -1,0 +1,225 @@
+@page "/admin/settings"
+@rendermode InteractiveServer
+@using SharingPictureOnline.Services
+@using SharingPictureOnline.Models
+@inject IAuthService AuthService
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+
+<PageTitle>Cài Đặt Hệ Thống | Admin</PageTitle>
+
+<div class="min-h-screen bg-slate-50">
+    @if (currentUser?.Role != "ADMIN")
+    {
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <i class="fa-solid fa-ban text-4xl text-red-600 mb-4"></i>
+                <p class="text-slate-700 font-semibold">Bạn không có quyền truy cập trang này</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="max-w-5xl mx-auto px-4 py-8">
+            <div class="mb-8 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800">Cài Đặt Hệ Thống</h1>
+                    <p class="text-slate-500 mt-2">Quản lý vai trò người dùng và cấu hình</p>
+                </div>
+                <button @onclick='() => Navigation.NavigateTo("/admin")' 
+                        class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>Quay lại
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="@(isError ? "bg-red-50 border-red-200 text-red-700" : "bg-green-50 border-green-200 text-green-700") border px-4 py-3 rounded-lg mb-6">
+                    @message
+                </div>
+            }
+
+            <div class="space-y-6">
+                <!-- User Roles Section -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 bg-fuchsia-100 rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-user-shield text-2xl text-fuchsia-600"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">Vai Trò Người Dùng</h2>
+                            <p class="text-sm text-slate-500">Các vai trò có sẵn trong hệ thống</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        @foreach (var role in availableRoles)
+                        {
+                            <div class="border border-slate-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-slate-800 text-lg">@role</h3>
+                                        <p class="text-sm text-slate-600 mt-1">@GetRoleDescription(role)</p>
+                                        <div class="flex items-center gap-4 mt-3">
+                                            <span class="text-sm text-slate-500">
+                                                <i class="fa-solid fa-users mr-1"></i>
+                                                @GetUserCountByRole(role) người dùng
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="@GetRoleBadgeClass(role)">
+                                        <i class="@GetRoleIcon(role) mr-2"></i>@role
+                                    </div>
+                                </div>
+                                
+                                <!-- Permissions -->
+                                <div class="mt-4 pt-4 border-t border-slate-200">
+                                    <p class="text-xs font-semibold text-slate-600 uppercase mb-2">Quyền hạn:</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach (var permission in GetRolePermissions(role))
+                                        {
+                                            <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">
+                                                <i class="fa-solid fa-check text-green-600 mr-1"></i>@permission
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Statistics Section -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-chart-bar text-2xl text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-800">Thống Kê Hệ Thống</h2>
+                            <p class="text-sm text-slate-500">Tổng quan về hệ thống</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="border border-slate-200 rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-fuchsia-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-users text-xl text-fuchsia-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-2xl font-bold text-slate-800">@totalUsers</p>
+                                    <p class="text-sm text-slate-500">Tổng người dùng</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-slate-200 rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-tags text-xl text-green-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-2xl font-bold text-slate-800">@totalTags</p>
+                                    <p class="text-sm text-slate-500">Tổng tags</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-slate-200 rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-user-shield text-xl text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-2xl font-bold text-slate-800">@adminCount</p>
+                                    <p class="text-sm text-slate-500">Quản trị viên</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private User? currentUser;
+    private List<User> users = new();
+    private List<Tag> tags = new();
+    private List<string> availableRoles = new();
+    private string message = "";
+    private bool isError = false;
+
+    private int totalUsers => users.Count;
+    private int totalTags => tags.Count;
+    private int adminCount => users.Count(u => u.Role == "ADMIN");
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await AuthService.GetCurrentUserAsync();
+        
+        if (currentUser?.Role != "ADMIN")
+        {
+            Navigation.NavigateTo("/", true);
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        users = await AdminService.GetAllUsersAsync();
+        tags = await AdminService.GetAllTagsAsync();
+        availableRoles = await AdminService.GetAvailableRolesAsync();
+    }
+
+    private int GetUserCountByRole(string role)
+    {
+        return users.Count(u => u.Role == role);
+    }
+
+    private string GetRoleDescription(string role)
+    {
+        return role switch
+        {
+            "ADMIN" => "Quyền quản trị toàn bộ hệ thống, quản lý người dùng, nội dung và cấu hình",
+            "MODERATOR" => "Quyền kiểm duyệt nội dung, xử lý báo cáo và quản lý bình luận",
+            "USER" => "Quyền người dùng cơ bản: upload ảnh, bình luận, like và theo dõi",
+            _ => "Vai trò người dùng"
+        };
+    }
+
+    private List<string> GetRolePermissions(string role)
+    {
+        return role switch
+        {
+            "ADMIN" => new List<string> { "Quản lý người dùng", "Quản lý tags", "Xem báo cáo", "Xóa nội dung", "Cấu hình hệ thống" },
+            "MODERATOR" => new List<string> { "Xem báo cáo", "Xóa bình luận", "Ẩn ảnh vi phạm", "Quản lý tags" },
+            "USER" => new List<string> { "Upload ảnh", "Bình luận", "Like", "Follow", "Tạo album" },
+            _ => new List<string>()
+        };
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "ADMIN" => "px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-bold",
+            "MODERATOR" => "px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-bold",
+            _ => "px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold"
+        };
+    }
+
+    private string GetRoleIcon(string role)
+    {
+        return role switch
+        {
+            "ADMIN" => "fa-solid fa-crown",
+            "MODERATOR" => "fa-solid fa-shield-halved",
+            _ => "fa-solid fa-user"
+        };
+    }
+}

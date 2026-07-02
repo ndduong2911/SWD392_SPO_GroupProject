@@ -1,0 +1,319 @@
+@page "/admin/accounts"
+@rendermode InteractiveServer
+@using SharingPictureOnline.Services
+@using SharingPictureOnline.Models
+@inject IAuthService AuthService
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+
+<PageTitle>Quản Lý Tài Khoản | Admin</PageTitle>
+
+<div class="min-h-screen bg-slate-50">
+    @if (currentUser?.Role != "ADMIN")
+    {
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <i class="fa-solid fa-ban text-4xl text-red-600 mb-4"></i>
+                <p class="text-slate-700 font-semibold">Bạn không có quyền truy cập trang này</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <div class="mb-8 flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800">Quản Lý Tài Khoản</h1>
+                    <p class="text-slate-500 mt-2">Quản lý người dùng và phân quyền</p>
+                </div>
+                <button @onclick='() => Navigation.NavigateTo("/admin")' 
+                        class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>Quay lại
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="@(isError ? "bg-red-50 border-red-200 text-red-700" : "bg-green-50 border-green-200 text-green-700") border px-4 py-3 rounded-lg mb-6">
+                    @message
+                </div>
+            }
+
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-200">
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <input type="text" @bind="searchQuery" @bind:event="oninput" 
+                                   placeholder="Tìm kiếm theo tên, email..."
+                                   class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                        </div>
+                        <select @bind="roleFilter" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                            <option value="">Tất cả vai trò</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="MODERATOR">Moderator</option>
+                            <option value="USER">User</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Người dùng</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Vai trò</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Ngày tạo</th>
+                                <th class="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            @foreach (var user in FilteredUsers)
+                            {
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-fuchsia-100 rounded-full flex items-center justify-center">
+                                                <i class="fa-solid fa-user text-fuchsia-600"></i>
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-slate-800">@user.Username</p>
+                                                <p class="text-sm text-slate-500">@(user.UserProfile?.DisplayName ?? "")</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-slate-600">@user.Email</td>
+                                    <td class="px-6 py-4">
+                                        @if (editingUserId == user.UserId)
+                                        {
+                                            <select @bind="editingRole" class="px-3 py-1 border border-slate-300 rounded-lg text-sm">
+                                                @foreach (var role in availableRoles)
+                                                {
+                                                    <option value="@role">@role</option>
+                                                }
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <span class="@GetRoleBadgeClass(user.Role)">@user.Role</span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4 text-slate-600">@user.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center justify-center gap-2">
+                                            @if (editingUserId == user.UserId)
+                                            {
+                                                <button @onclick="SaveRole" class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm">
+                                                    <i class="fa-solid fa-check"></i>
+                                                </button>
+                                                <button @onclick="CancelEdit" class="px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white rounded text-sm">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button @onclick="() => StartEditRole(user)" class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">
+                                                    <i class="fa-solid fa-pen"></i>
+                                                </button>
+                                                @if (user.UserId != currentUser.UserId)
+                                                {
+                                                    <button @onclick="() => ShowDeleteConfirm(user)" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (!FilteredUsers.Any())
+                {
+                    <div class="p-12 text-center text-slate-500">
+                        <i class="fa-solid fa-users-slash text-4xl mb-4"></i>
+                        <p>Không tìm thấy người dùng nào</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Delete Confirmation Modal -->
+    @if (showDeleteModal && userToDelete != null)
+    {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @onclick="HideDeleteConfirm">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4" @onclick:stopPropagation="true">
+                <div class="p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-exclamation-triangle text-2xl text-red-600"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-800">Xác Nhận Xóa</h3>
+                    </div>
+                    
+                    <p class="text-slate-600 mb-4">
+                        Bạn có chắc chắn muốn xóa tài khoản này không?
+                    </p>
+                    
+                    <div class="bg-slate-50 rounded-lg p-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-fuchsia-100 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-user text-fuchsia-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-slate-800">@userToDelete.Username</p>
+                                <p class="text-sm text-slate-500">@userToDelete.Email</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+                        <div class="flex gap-2">
+                            <i class="fa-solid fa-info-circle text-yellow-600 mt-0.5"></i>
+                            <div class="text-sm text-yellow-800">
+                                <p class="font-semibold mb-1">Lưu ý quan trọng:</p>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Tất cả ảnh của người dùng sẽ bị xóa</li>
+                                    <li>Tất cả bình luận sẽ bị xóa</li>
+                                    <li>Hành động này không thể hoàn tác</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button @onclick="HideDeleteConfirm" 
+                                class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition">
+                            Hủy
+                        </button>
+                        <button @onclick="ConfirmDelete" 
+                                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition">
+                            <i class="fa-solid fa-trash mr-2"></i>Xóa Tài Khoản
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private User? currentUser;
+    private List<User> users = new();
+    private List<string> availableRoles = new();
+    private string searchQuery = "";
+    private string roleFilter = "";
+    private string message = "";
+    private bool isError = false;
+    
+    private Guid? editingUserId;
+    private string editingRole = "";
+
+    // Delete confirmation modal
+    private bool showDeleteModal = false;
+    private User? userToDelete = null;
+
+    private IEnumerable<User> FilteredUsers => users.Where(u =>
+        (string.IsNullOrEmpty(searchQuery) || 
+         u.Username.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+         u.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
+    );
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await AuthService.GetCurrentUserAsync();
+        
+        if (currentUser?.Role != "ADMIN")
+        {
+            Navigation.NavigateTo("/", true);
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        users = await AdminService.GetAllUsersAsync();
+        availableRoles = await AdminService.GetAvailableRolesAsync();
+    }
+
+    private void StartEditRole(User user)
+    {
+        editingUserId = user.UserId;
+        editingRole = user.Role;
+    }
+
+    private async Task SaveRole()
+    {
+        if (editingUserId.HasValue)
+        {
+            try
+            {
+                await AdminService.UpdateUserRoleAsync(editingUserId.Value, editingRole);
+                message = "Cập nhật vai trò thành công!";
+                isError = false;
+                editingUserId = null;
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                message = $"Lỗi: {ex.Message}";
+                isError = true;
+            }
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingUserId = null;
+        editingRole = "";
+    }
+
+    private void ShowDeleteConfirm(User user)
+    {
+        userToDelete = user;
+        showDeleteModal = true;
+    }
+
+    private void HideDeleteConfirm()
+    {
+        showDeleteModal = false;
+        userToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (userToDelete != null)
+        {
+            try
+            {
+                await AdminService.DeleteUserAsync(userToDelete.UserId);
+                message = $"Đã xóa tài khoản {userToDelete.Username} thành công!";
+                isError = false;
+                HideDeleteConfirm();
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                message = $"Lỗi: {ex.Message}";
+                isError = true;
+                HideDeleteConfirm();
+            }
+        }
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role switch
+        {
+            "ADMIN" => "px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold",
+            "MODERATOR" => "px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold",
+            _ => "px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-semibold"
+        };
+    }
+}
