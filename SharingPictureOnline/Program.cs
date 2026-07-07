@@ -19,7 +19,8 @@ builder.Services.AddScoped<ILikeRepository, LikeRepository>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<IFollowRepository, FollowRepository>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
-
+builder.Services.AddScoped<IFollowRepository, FollowRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 // Register Services
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IAlbumService, AlbumService>();
@@ -29,8 +30,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
-
-
+builder.Services.AddScoped<IFollowService, FollowService>();
+builder.Services.AddSingleton<NotificationStateService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 var app = builder.Build();
 
 

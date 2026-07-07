@@ -1,6 +1,7 @@
 @page "/"
 @using SharingPictureOnline.Services
 @inject IPhotoService PhotoService
+@inject NavigationManager Navigation
 
 <PageTitle>Khám Phá Hình Ảnh | FakePinterest</PageTitle>
 
@@ -15,12 +16,12 @@
         </p>
         <form class="relative flex items-center bg-white rounded-full shadow-lg p-2 max-w-2xl mx-auto" @onsubmit="Search" @onsubmit:preventDefault @formname="SearchForm">
             <i class="fa-solid fa-magnifying-glass text-slate-400 ml-4 text-lg"></i>
-            <input type="text" 
+            <input type="text"
                    autocomplete="off"
-                   @bind="searchText" 
-                   placeholder="Tìm kiếm ảnh độ phân giải cao, chủ đề..." 
+                   @bind="searchText"
+                   placeholder="Tìm kiếm ảnh độ phân giải cao, chủ đề..."
                    class="w-full pl-3 pr-4 py-3 text-slate-900 focus:outline-none focus:ring-0 search-input text-base">
-            <button type="submit" 
+            <button type="submit"
                     class="bg-fuchsia-600 text-white px-6 py-3 rounded-full hover:bg-fuchsia-700 font-medium transition shrink-0">
                 Tìm kiếm
             </button>
@@ -63,9 +64,10 @@
         <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
             @foreach (var photo in photos)
             {
-                <div class="break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm bg-slate-200">
-                    <img src="@GetImageUrl(photo.StorageKey)" 
-                         alt="@photo.Title" 
+                <div class="break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm bg-slate-200 cursor-pointer"
+                     @onclick="() => GoToDetail(photo.PhotoId)">
+                    <img src="@GetImageUrl(photo.StorageKey)"
+                         alt="@photo.Title"
                          class="w-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end text-white">
                         <p class="font-medium">@photo.Title</p>
@@ -91,8 +93,8 @@
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             photos = await PhotoService.GetAllPhotosAsync();
-            photos = photos.Where(p => 
-                p.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) || 
+            photos = photos.Where(p =>
+                p.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                 (p.Description ?? "").Contains(searchText, StringComparison.OrdinalIgnoreCase));
         }
         else
@@ -105,5 +107,10 @@
     {
         // StorageKey is already the full Cloudinary URL
         return storageKey;
+    }
+
+    private void GoToDetail(Guid photoId)
+    {
+        Navigation.NavigateTo($"/photo/{photoId}");
     }
 }

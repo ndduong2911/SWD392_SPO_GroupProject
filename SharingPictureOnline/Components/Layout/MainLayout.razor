@@ -1,8 +1,12 @@
 @inherits LayoutComponentBase
 @using SharingPictureOnline.Services
+@using SharingPictureOnline.Repositories
 @inject IAuthService AuthService
+@inject INotificationRepository NotifRepo
+@inject NotificationStateService NotifState
 @inject NavigationManager Navigation
 @implements IDisposable
+@inject INotificationService NotifService
 
 <header class="bg-white shadow-sm sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -24,14 +28,52 @@
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                         <span>Upload</span>
                     </a>
-                    <button class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
-                        <i class="fa-solid fa-bell text-slate-600"></i>
-                    </button>
+
+                    <div class="relative">
+                        <button @onclick="ToggleNotificationMenu" class="relative w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
+                            <i class="fa-solid fa-bell text-slate-600"></i>
+                            @if (unreadCount > 0)
+                            {
+                                <span class="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full border-2 border-white -mt-1 -mr-1">
+                                    @(unreadCount > 99 ? "99+" : unreadCount)
+                                </span>
+                            }
+                        </button>
+
+                        @if (showNotificationMenu)
+                        {
+                            <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50 max-h-96 overflow-y-auto">
+                                <div class="px-4 py-2 border-b border-slate-100 font-semibold text-slate-800">Thông báo</div>
+
+                                @if (notifications.Any())
+                                {
+                                    @foreach (var notif in notifications)
+                                    {
+                                        <div class="px-4 py-3 hover:bg-slate-50 transition border-b border-slate-50 flex items-start gap-3">
+                                            <i class="fa-solid fa-user-plus text-fuchsia-600 mt-1"></i>
+                                            <div>
+                                                <p class="text-sm text-slate-700">
+                                                    <span class="font-bold">@GetUsernameFromId(notif.RefId)</span>
+                                                    đã theo dõi bạn!
+                                                </p>
+                                                <span class="text-xs text-slate-400">@notif.CreatedAt.ToString("HH:mm dd/MM")</span>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="px-4 py-6 text-center text-slate-400 text-sm italic">Không có thông báo mới</div>
+                                }
+                            </div>
+                        }
+                    </div>
+
                     <div class="relative" @onclick="ToggleUserMenu">
                         @if (!string.IsNullOrEmpty(currentUser.UserProfile?.AvatarUrl))
                         {
-                            <img src="@currentUser.UserProfile.AvatarUrl" 
-                                 alt="@currentUser.Username" 
+                            <img src="@currentUser.UserProfile.AvatarUrl"
+                                 alt="@currentUser.Username"
                                  class="w-10 h-10 rounded-full object-cover cursor-pointer ring-2 ring-fuchsia-200 hover:ring-fuchsia-400 transition" />
                         }
                         else
@@ -110,6 +152,11 @@
     private Models.User? currentUser = null;
     private bool showUserMenu = false;
     private bool isInitialized = false;
+    private bool showNotificationMenu = false;
+
+    private List<SharingPictureOnline.Models.Notification> notifications = new();
+    private Dictionary<Guid, string> followerNames = new(); // Bộ nhớ tạm lưu tên
+    private int unreadCount = 0;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -126,12 +173,73 @@
         {
             currentUser = await AuthService.GetCurrentUserAsync();
             isAuthenticated = currentUser != null;
+
+            if (isAuthenticated && currentUser != null)
+            {
+                unreadCount = await NotifRepo.CountUnreadAsync(currentUser.UserId);
+                notifications = await NotifRepo.GetUnreadByUserIdAsync(currentUser.UserId);
+
+                // Tải tên người theo dõi ngay khi load danh sách thông báo
+                await LoadFollowerNamesAsync(notifications);
+
+                NotifState.OnNotificationReceived += HandleNewNotification;
+            }
+
             StateHasChanged();
         }
         catch (Exception)
         {
-            // Ignore errors during auth check
+            // Bỏ qua lỗi
         }
+    }
+
+    private async Task ToggleNotificationMenu()
+    {
+        showNotificationMenu = !showNotificationMenu;
+
+        if (showNotificationMenu && unreadCount > 0)
+        {
+            await NotifService.MarkAllAsReadAsync(currentUser.UserId);
+            unreadCount = 0;
+            StateHasChanged();
+        }
+    }
+
+    private async void HandleNewNotification(Guid targetUserId)
+    {
+        await InvokeAsync(async () =>
+        {
+            if (currentUser != null && targetUserId == currentUser.UserId)
+            {
+                unreadCount++;
+                notifications = await NotifRepo.GetUnreadByUserIdAsync(currentUser.UserId);
+
+                // Tải thêm tên người theo dõi cho thông báo mới
+                await LoadFollowerNamesAsync(notifications);
+
+                StateHasChanged();
+            }
+        });
+    }
+
+    // HÀM MỚI: Tải tên người dùng từ DB và lưu vào Dictionary
+    private async Task LoadFollowerNamesAsync(List<SharingPictureOnline.Models.Notification> notifs)
+    {
+        foreach (var n in notifs)
+        {
+            if (n.RefId.HasValue && !followerNames.ContainsKey(n.RefId.Value))
+            {
+                var user = await AuthService.GetUserByIdAsync(n.RefId.Value);
+                followerNames[n.RefId.Value] = user?.Username ?? "Ai đó";
+            }
+        }
+    }
+
+    // HÀM MỚI: Lấy tên siêu nhanh từ Dictionary để hiển thị ra UI
+    private string GetUsernameFromId(Guid? refId)
+    {
+        if (!refId.HasValue) return "Ai đó";
+        return followerNames.TryGetValue(refId.Value, out var name) ? name : "Ai đó";
     }
 
     private void ToggleUserMenu()
@@ -148,13 +256,15 @@
 
     public void Dispose()
     {
-        // No timer to dispose
+        if (NotifState != null)
+        {
+            NotifState.OnNotificationReceived -= HandleNewNotification;
+        }
     }
 
     private string GetUserInitial(string username)
     {
-        if (string.IsNullOrEmpty(username))
-            return "?";
+        if (string.IsNullOrEmpty(username)) return "?";
         return username.Substring(0, 1).ToUpper();
     }
 }

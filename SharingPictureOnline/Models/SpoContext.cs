@@ -40,8 +40,14 @@ public partial class SpoContext : DbContext
     public virtual DbSet<UserProfile> UserProfiles { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    { }//     => optionsBuilder.UseSqlServer("Data Source=DESKTOP-BN9D7E3\\SQLEXPRESS;Initial Catalog=SPO; Trusted_Connection=SSPI;Encrypt=false;TrustServerCertificate=true");
+    {
+        var config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer(config.GetConnectionString("MyCnn"));
+        }
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Album>(entity =>
@@ -365,6 +371,9 @@ public partial class SpoContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("avatarURL");
             entity.Property(e => e.Bio).HasColumnName("bio");
+            entity.Property(e => e.DisplayName)
+                .HasMaxLength(255)
+                .HasColumnName("displayName");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime")

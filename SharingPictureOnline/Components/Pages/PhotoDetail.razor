@@ -1,0 +1,183 @@
+﻿@page "/photo/{PhotoId:guid}"
+@using SharingPictureOnline.Services
+@inject IPhotoService PhotoService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>@(photo?.Title ?? "Chi tiết ảnh") | FakePinterest</PageTitle>
+
+@if (isLoading)
+{
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600 mb-4"></i>
+            <p class="text-slate-500">Đang tải ảnh...</p>
+        </div>
+    </div>
+}
+else if (photo == null)
+{
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="text-center py-20">
+            <i class="fa-solid fa-image-slash text-6xl text-slate-300 mb-4"></i>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">Không tìm thấy ảnh</h3>
+            <p class="text-slate-500 mb-6">Bức ảnh này có thể đã bị xóa hoặc không tồn tại.</p>
+            <button @onclick="GoBack" class="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-full font-medium transition shadow-md">
+                <i class="fa-solid fa-arrow-left mr-2"></i>Quay lại trang chủ
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="max-w-6xl mx-auto px-4 py-8 bg-slate-50 min-h-screen">
+        <button class="mb-6 w-10 h-10 rounded-full bg-white shadow-sm hover:shadow-md hover:bg-slate-50 flex items-center justify-center transition"
+                @onclick="GoBack">
+            <i class="fa-solid fa-arrow-left text-slate-700"></i>
+        </button>
+
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col lg:flex-row">
+
+            <div class="lg:w-1/2 bg-slate-100 flex items-center justify-center min-h-[300px]">
+                <img src="@GetImageUrl(photo.StorageKey)"
+                     alt="@photo.Title"
+                     class="w-full h-auto max-h-[85vh] object-contain" />
+            </div>
+
+            <div class="lg:w-1/2 p-6 md:p-8 flex flex-col max-h-[85vh] overflow-y-auto custom-scrollbar">
+
+                <div class="flex items-center justify-between mb-6 pb-6 border-b border-slate-100">
+                    <div class="flex gap-3">
+                        <button class="flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition
+                                           @(isLiked ? "bg-fuchsia-100 text-fuchsia-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200")"
+                                @onclick="ToggleLike">
+                            <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart text-lg"></i>
+                            <span>@likeCount</span>
+                        </button>
+                    </div>
+                    <button class="px-6 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-full font-semibold transition shadow-md">
+                        Lưu
+                    </button>
+                </div>
+
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-slate-900 mb-3">@photo.Title</h1>
+                    @if (!string.IsNullOrEmpty(photo.Description))
+                    {
+                        <p class="text-slate-600 leading-relaxed">@photo.Description</p>
+                    }
+                </div>
+
+                <div class="flex items-center justify-between bg-slate-50 p-4 rounded-2xl mb-8">
+                    <div class="flex items-center gap-3 cursor-pointer group" @onclick="GoToProfile">
+                        <div class="w-12 h-12 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-sm group-hover:border-fuchsia-300 transition">
+                            @if (!string.IsNullOrEmpty(photo.User?.UserProfile?.AvatarUrl))
+                            {
+                                <img src="@photo.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-user text-slate-400"></i>
+                            }
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-900 group-hover:text-fuchsia-600 transition">
+                                @(photo.User?.Username ?? "Anonymous")
+                            </p>
+                            <p class="text-xs text-slate-500">@photo.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy")</p>
+                        </div>
+                    </div>
+
+                    @if (currentUser != null && currentUser.UserId != photo.UserId)
+                    {
+                        <button class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-full font-medium transition text-sm">
+                            Theo dõi
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid PhotoId { get; set; }
+
+    private Models.Photo? photo;
+    private Models.User? currentUser;
+    private bool isLoading = true;
+    private bool isLiked = false;
+    private int likeCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Lấy thông tin user hiện tại bằng AuthService giống như bên Profile.razor
+            currentUser = await AuthService.GetCurrentUserAsync();
+
+            // Gọi hàm lấy chi tiết ảnh
+            // Giả định trong IPhotoService của bạn có hàm GetPhotoByIdAsync
+            photo = await PhotoService.GetPhotoByIdAsync(PhotoId);
+
+            if (photo != null)
+            {
+                likeCount = photo.LikeCount;
+                // Nếu bạn có hàm kiểm tra Like, bỏ comment đoạn dưới:
+                // if (currentUser != null)
+                // {
+                //    isLiked = await PhotoService.IsLikedByUserAsync(PhotoId, currentUser.UserId);
+                // }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading photo: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void GoToProfile()
+    {
+        if (photo?.User != null && !string.IsNullOrEmpty(photo.User.Username))
+        {
+            Navigation.NavigateTo($"/profile/{photo.User.Username}");
+        }
+    }
+
+    private string GetImageUrl(string storageKey)
+    {
+        // Xử lý link ảnh tương tự bên Home.razor
+        return storageKey;
+    }
+
+    private async Task ToggleLike()
+    {
+        if (currentUser == null)
+        {
+            // Nếu chưa đăng nhập thì chuyển hướng ra trang login
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Bỏ comment nếu có hàm ToggleLikeAsync trong IPhotoService
+        // var (nowLiked, newCount) = await PhotoService.ToggleLikeAsync(PhotoId, currentUser.UserId);
+        // isLiked = nowLiked;
+        // likeCount = newCount;
+
+        // Code tạm (Mock)
+        isLiked = !isLiked;
+        likeCount += isLiked ? 1 : -1;
+    }
+}

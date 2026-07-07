@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+﻿using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using SharingPictureOnline.Models;
 
@@ -95,5 +95,17 @@ public class AuthService : IAuthService
     {
         _cachedUser = null;
         await _sessionStorage.DeleteAsync("userId");
+    }
+    public async Task<User?> GetUserByUsernameAsync(string username)
+    {
+        return await _context.Users
+            .Include(u => u.UserProfile)
+            .FirstOrDefaultAsync(u => u.Username == username);
+    }
+    public async Task<User?> GetUserByIdAsync(Guid userId)
+    {
+        return await _context.Users
+            .Include(u => u.UserProfile)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
     }
 }

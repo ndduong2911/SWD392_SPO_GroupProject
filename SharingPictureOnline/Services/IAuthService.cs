@@ -9,4 +9,6 @@ public interface IAuthService
     Task<User?> GetCurrentUserAsync();
     Task LogoutAsync();
     bool IsAuthenticated { get; }
+    Task<User?> GetUserByUsernameAsync(string username);
+    Task<User?> GetUserByIdAsync(Guid userId);
 }
