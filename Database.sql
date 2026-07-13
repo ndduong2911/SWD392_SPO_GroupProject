@@ -1,4 +1,5 @@
 ﻿
+USE SWD392
 
 -- 1. TẠO BẢNG USER
 CREATE TABLE [USER] (
@@ -20,7 +21,7 @@ CREATE TABLE [USER_PROFILE] (
     [bio] NVARCHAR(MAX) NULL,
     [avatarURL] VARCHAR(255) NULL,
     [website] VARCHAR(255) NULL,
-    [displayName] NVARCHAR(255) NULL;
+    [displayName] NVARCHAR(255) NULL,
     [updatedAt] DATETIME NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_UserProfile PRIMARY KEY ([profileID]),
     CONSTRAINT UQ_UserProfile_User UNIQUE ([userID]), -- Đảm bảo tính duy nhất để tạo thành quan hệ 1-1

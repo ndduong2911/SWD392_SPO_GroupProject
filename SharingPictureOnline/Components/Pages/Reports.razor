@@ -2,9 +2,11 @@
 @rendermode InteractiveServer
 @using SharingPictureOnline.Services
 @using SharingPictureOnline.Models
+@using Microsoft.EntityFrameworkCore
 @inject IModerationService ModerationService
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject SpoContext DbContext
 
 <PageTitle>Quản Lý Báo Cáo | Admin</PageTitle>
 
@@ -217,7 +219,7 @@
                                                 }
                                             </td>
                                             <td class="px-5 py-4 text-center">
-                                                <button @onclick="() => OpenDetail(report)"
+                                                <button @onclick="@(async () => await OpenDetail(report))"
                                                         class="px-3 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg text-xs font-medium transition">
                                                     <i class="fa-solid fa-eye mr-1"></i>Xem
                                                 </button>
@@ -307,6 +309,61 @@
                     </p>
                     <p class="text-xs font-mono text-slate-600 break-all">@selectedReport.TargetId</p>
                 </div>
+
+                <!-- Preview nội dung bị báo cáo -->
+                @if (selectedReport.TargetType == "PHOTO" && targetPhoto != null)
+                {
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-xs font-semibold text-slate-400 uppercase mb-3">Ảnh bị báo cáo</p>
+                        <div class="rounded-lg overflow-hidden bg-slate-200 max-h-64 flex items-center justify-center">
+                            <img src="@targetPhoto.StorageKey"
+                                 alt="@targetPhoto.Title"
+                                 class="w-full max-h-64 object-contain" />
+                        </div>
+                        <div class="mt-2 flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-slate-800 text-sm">@targetPhoto.Title</p>
+                                <p class="text-xs text-slate-500">
+                                    <i class="fa-solid fa-user mr-1"></i>@(targetPhoto.User?.Username ?? "—")
+                                    • @targetPhoto.UploadedAt.ToString("dd/MM/yyyy")
+                                </p>
+                            </div>
+                            <span class="px-2 py-1 bg-slate-200 text-slate-600 rounded text-xs">@targetPhoto.Visibility</span>
+                        </div>
+                    </div>
+                }
+                else if (selectedReport.TargetType == "COMMENT" && targetComment != null)
+                {
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-xs font-semibold text-slate-400 uppercase mb-3">Bình luận bị báo cáo</p>
+                        <div class="bg-white border border-slate-200 rounded-lg p-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-7 h-7 bg-fuchsia-100 rounded-full flex items-center justify-center text-fuchsia-600 text-xs font-bold">
+                                    @GetInitial(targetComment.User?.Username)
+                                </div>
+                                <span class="text-sm font-medium text-slate-700">@(targetComment.User?.Username ?? "—")</span>
+                                <span class="text-xs text-slate-400 ml-auto">@targetComment.CreatedAt.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <p class="text-sm text-slate-700 leading-relaxed">@targetComment.Content</p>
+                        </div>
+                    </div>
+                }
+                else if (selectedReport.TargetType == "USER" && targetUser != null)
+                {
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-xs font-semibold text-slate-400 uppercase mb-3">Tài khoản bị báo cáo</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-fuchsia-100 rounded-full flex items-center justify-center text-fuchsia-600 font-bold text-lg">
+                                @GetInitial(targetUser.Username)
+                            </div>
+                            <div>
+                                <p class="font-semibold text-slate-800">@targetUser.Username</p>
+                                <p class="text-sm text-slate-500">@targetUser.Email</p>
+                                <span class="@GetRoleBadge(targetUser.Role) px-2 py-0.5 rounded text-xs font-semibold mt-1 inline-block">@targetUser.Role</span>
+                            </div>
+                        </div>
+                    </div>
+                }
 
                 <!-- Resolved outcome — if already handled -->
                 @if (selectedReport.Status != "PENDING" && selectedReport.AuditLogs.Any())
@@ -450,6 +507,11 @@
     private Report? selectedReport;
     private string selectedAction = "";
 
+    // Target content preview
+    private Photo? targetPhoto;
+    private Comment? targetComment;
+    private User? targetUser;
+
     // Confirm dialog
     private bool showConfirm = false;
 
@@ -514,10 +576,33 @@
     }
 
     // ── Detail modal ──────────────────────────────────────────────────────────
-    private void OpenDetail(Report report)
+    private async Task OpenDetail(Report report)
     {
         selectedReport = report;
         selectedAction = "";
+        targetPhoto   = null;
+        targetComment = null;
+        targetUser    = null;
+
+        // Load nội dung bị báo cáo
+        if (report.TargetType == "PHOTO")
+        {
+            targetPhoto = await DbContext.Photos
+                .Include(p => p.User)
+                .FirstOrDefaultAsync(p => p.PhotoId == report.TargetId);
+        }
+        else if (report.TargetType == "COMMENT")
+        {
+            targetComment = await DbContext.Comments
+                .Include(c => c.User)
+                .FirstOrDefaultAsync(c => c.CommentId == report.TargetId);
+        }
+        else if (report.TargetType == "USER")
+        {
+            targetUser = await DbContext.Users
+                .FirstOrDefaultAsync(u => u.UserId == report.TargetId);
+        }
+
         showDetail = true;
         message = "";
     }
@@ -606,5 +691,13 @@
         "COMMENT" => "bg-blue-100 text-blue-700",
         "USER"    => "bg-red-100 text-red-700",
         _         => "bg-slate-100 text-slate-600"
+    };
+
+    private static string GetRoleBadge(string role) => role switch
+    {
+        "ADMIN"     => "bg-red-100 text-red-700",
+        "MODERATOR" => "bg-blue-100 text-blue-700",
+        "BANNED"    => "bg-gray-800 text-white",
+        _           => "bg-slate-100 text-slate-600"
     };
 }

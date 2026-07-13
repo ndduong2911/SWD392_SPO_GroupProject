@@ -2,7 +2,7 @@
 -- Script: Add DisplayName column to USER_PROFILE
 -- =============================================
 
-USE SPO;
+USE SWD392;
 GO
 
 -- Check if column exists before adding
