@@ -15,6 +15,8 @@ public partial class SpoContext : DbContext
     {
     }
 
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
+
     public virtual DbSet<Album> Albums { get; set; }
 
     public virtual DbSet<AlbumPhoto> AlbumPhotos { get; set; }
@@ -44,6 +46,37 @@ public partial class SpoContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.LogId).HasName("PK_AuditLog");
+
+            entity.ToTable("AUDIT_LOG");
+
+            entity.Property(e => e.LogId)
+                .HasDefaultValueSql("(newid())")
+                .HasColumnName("logID");
+            entity.Property(e => e.ReportId).HasColumnName("reportID");
+            entity.Property(e => e.ActorId).HasColumnName("actorID");
+            entity.Property(e => e.Action)
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("action");
+            entity.Property(e => e.Note).HasColumnName("note");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("createdAt");
+
+            entity.HasOne(d => d.Report).WithMany(p => p.AuditLogs)
+                .HasForeignKey(d => d.ReportId)
+                .HasConstraintName("FK_AuditLog_Report");
+
+            entity.HasOne(d => d.Actor).WithMany()
+                .HasForeignKey(d => d.ActorId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_AuditLog_Actor");
+        });
+
         modelBuilder.Entity<Album>(entity =>
         {
             entity.HasKey(e => e.AlbumId).HasName("PK_Album");

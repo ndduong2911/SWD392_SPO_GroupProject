@@ -1,53 +1,610 @@
-@page "/reports"
+@page "/admin/reports"
+@rendermode InteractiveServer
 @using SharingPictureOnline.Services
+@using SharingPictureOnline.Models
 @inject IModerationService ModerationService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
 
-<PageTitle>Reports</PageTitle>
+<PageTitle>Quản Lý Báo Cáo | Admin</PageTitle>
 
-<h3>Moderation Reports</h3>
+<div class="min-h-screen bg-slate-50 flex">
 
-@if (reports == null)
+    <!-- ═══════════════════════════════════════════════════════════
+         SIDEBAR – magenta
+    ════════════════════════════════════════════════════════════════ -->
+    <aside class="w-64 min-h-screen bg-fuchsia-700 text-white flex flex-col shadow-xl flex-shrink-0">
+        <!-- Logo / Title -->
+        <div class="px-6 py-6 border-b border-fuchsia-600">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-white text-sm">Admin Panel</p>
+                    <p class="text-fuchsia-200 text-xs">FakePinterest</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 px-4 py-4 space-y-1">
+            <a href="/admin"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-fuchsia-100 hover:bg-fuchsia-600 hover:text-white transition text-sm font-medium">
+                <i class="fa-solid fa-gauge-high w-4 text-center"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/accounts"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-fuchsia-100 hover:bg-fuchsia-600 hover:text-white transition text-sm font-medium">
+                <i class="fa-solid fa-users w-4 text-center"></i>
+                <span>Tài Khoản</span>
+            </a>
+            <a href="/admin/tags"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-fuchsia-100 hover:bg-fuchsia-600 hover:text-white transition text-sm font-medium">
+                <i class="fa-solid fa-tags w-4 text-center"></i>
+                <span>Tags</span>
+            </a>
+            <a href="/admin/reports"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white bg-opacity-20 text-white transition text-sm font-semibold">
+                <i class="fa-solid fa-flag w-4 text-center"></i>
+                <span>Báo Cáo</span>
+                @if (pendingCount > 0)
+                {
+                    <span class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">@pendingCount</span>
+                }
+            </a>
+            <a href="/admin/settings"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-fuchsia-100 hover:bg-fuchsia-600 hover:text-white transition text-sm font-medium">
+                <i class="fa-solid fa-cog w-4 text-center"></i>
+                <span>Cài Đặt</span>
+            </a>
+        </nav>
+
+        <!-- Back to site -->
+        <div class="px-4 py-4 border-t border-fuchsia-600">
+            <a href="/"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-fuchsia-100 hover:bg-fuchsia-600 hover:text-white transition text-sm font-medium">
+                <i class="fa-solid fa-arrow-left w-4 text-center"></i>
+                <span>Về trang chủ</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN CONTENT
+    ════════════════════════════════════════════════════════════════ -->
+    <main class="flex-1 overflow-auto">
+        @if (currentUser?.Role != "ADMIN")
+        {
+            <div class="flex items-center justify-center min-h-screen">
+                <div class="text-center">
+                    <i class="fa-solid fa-ban text-4xl text-red-600 mb-4"></i>
+                    <p class="text-slate-700 font-semibold">Bạn không có quyền truy cập trang này</p>
+                </div>
+            </div>
+        }
+        else if (isLoading)
+        {
+            <div class="flex items-center justify-center min-h-screen">
+                <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600"></i>
+            </div>
+        }
+        else
+        {
+            <div class="px-6 py-8 max-w-6xl">
+
+                <!-- Page Header -->
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800">
+                            <i class="fa-solid fa-flag text-fuchsia-600 mr-2"></i>Quản Lý Báo Cáo
+                        </h1>
+                        <p class="text-slate-500 text-sm mt-1">Xem xét và xử lý các báo cáo vi phạm từ người dùng</p>
+                    </div>
+                    <!-- Stats strip -->
+                    <div class="flex gap-3">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-center">
+                            <p class="text-xs text-yellow-600 font-medium">Chờ xử lý</p>
+                            <p class="text-2xl font-bold text-yellow-700">@pendingCount</p>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-center">
+                            <p class="text-xs text-green-600 font-medium">Đã giải quyết</p>
+                            <p class="text-2xl font-bold text-green-700">@resolvedCount</p>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-center">
+                            <p class="text-xs text-slate-500 font-medium">Đã bác bỏ</p>
+                            <p class="text-2xl font-bold text-slate-600">@rejectedCount</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feedback message -->
+                @if (!string.IsNullOrEmpty(message))
+                {
+                    <div class="@(isError ? "bg-red-50 border-red-200 text-red-700" : "bg-green-50 border-green-200 text-green-700") border px-4 py-3 rounded-lg mb-4 flex items-center gap-2">
+                        <i class="@(isError ? "fa-solid fa-circle-xmark" : "fa-solid fa-circle-check")"></i>
+                        @message
+                    </div>
+                }
+
+                <!-- Filter Tabs + Search -->
+                <div class="bg-white rounded-xl shadow-sm mb-4">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                        <!-- Status tabs -->
+                        <div class="flex gap-1">
+                            @foreach (var tab in new[] { ("ALL", "Tất cả"), ("PENDING", "Chờ xử lý"), ("RESOLVED", "Đã xử lý"), ("REJECTED", "Đã bác bỏ") })
+                            {
+                                <button @onclick="() => SetTab(tab.Item1)"
+                                        class="@(activeTab == tab.Item1 ? "bg-fuchsia-600 text-white" : "text-slate-600 hover:bg-slate-100") px-4 py-1.5 rounded-full text-sm font-medium transition">
+                                    @tab.Item2
+                                </button>
+                            }
+                        </div>
+                        <!-- Filters -->
+                        <div class="flex gap-3">
+                            <select @bind="typeFilter"
+                                    class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400">
+                                <option value="">Tất cả loại</option>
+                                <option value="PHOTO">Ảnh</option>
+                                <option value="COMMENT">Bình luận</option>
+                                <option value="USER">Tài khoản</option>
+                            </select>
+                            <input type="text" @bind="searchQuery" @bind:event="oninput"
+                                   placeholder="Tìm theo lý do, người báo cáo..."
+                                   class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400 w-56" />
+                        </div>
+                    </div>
+
+                    <!-- Report Table -->
+                    @if (!FilteredReports.Any())
+                    {
+                        <div class="p-12 text-center text-slate-400">
+                            <i class="fa-solid fa-flag-checkered text-5xl mb-4 block"></i>
+                            <p class="font-medium text-slate-500">Không có báo cáo nào phù hợp</p>
+                            <p class="text-sm mt-1">Thử thay đổi bộ lọc hoặc tab trạng thái</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Người báo cáo</th>
+                                        <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Loại vi phạm</th>
+                                        <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Lý do</th>
+                                        <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Ngày tạo</th>
+                                        <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Trạng thái</th>
+                                        <th class="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    @foreach (var report in FilteredReports)
+                                    {
+                                        <tr class="hover:bg-slate-50 transition">
+                                            <td class="px-5 py-4">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-8 h-8 bg-fuchsia-100 rounded-full flex items-center justify-center text-fuchsia-600 font-semibold text-xs flex-shrink-0">
+                                                        @GetInitial(report.Reporter?.Username)
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-medium text-slate-800">@(report.Reporter?.Username ?? "—")</p>
+                                                        <p class="text-xs text-slate-400">@(report.Reporter?.Email ?? "")</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-5 py-4">
+                                                <span class="@GetTargetTypeBadge(report.TargetType) px-2.5 py-1 rounded-full text-xs font-semibold">
+                                                    @GetTargetTypeLabel(report.TargetType)
+                                                </span>
+                                            </td>
+                                            <td class="px-5 py-4 text-sm text-slate-600 max-w-xs">
+                                                <p class="truncate" title="@report.Reason">@report.Reason</p>
+                                            </td>
+                                            <td class="px-5 py-4 text-sm text-slate-500">
+                                                @report.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                            </td>
+                                            <td class="px-5 py-4">
+                                                <span class="@GetStatusBadge(report.Status) px-2.5 py-1 rounded-full text-xs font-semibold">
+                                                    @GetStatusLabel(report.Status)
+                                                </span>
+                                                @if (!string.IsNullOrEmpty(report.AuditLogs.LastOrDefault()?.Action))
+                                                {
+                                                    var log = report.AuditLogs.OrderByDescending(a => a.CreatedAt).First();
+                                                    <p class="text-xs text-slate-400 mt-1">
+                                                        <i class="@actions[log.Action].Icon mr-1"></i>@actions[log.Action].Label
+                                                    </p>
+                                                }
+                                            </td>
+                                            <td class="px-5 py-4 text-center">
+                                                <button @onclick="() => OpenDetail(report)"
+                                                        class="px-3 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg text-xs font-medium transition">
+                                                    <i class="fa-solid fa-eye mr-1"></i>Xem
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div><!-- end card -->
+            </div>
+        }
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     REPORT DETAIL MODAL
+════════════════════════════════════════════════════════════════ -->
+@if (showDetail && selectedReport != null)
 {
-    <p><em>Loading...</em></p>
+    <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+         @onclick="CloseDetail">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+             @onclick:stopPropagation="true">
+
+            <!-- Modal header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-fuchsia-100 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-flag text-fuchsia-600"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Chi Tiết Báo Cáo</h2>
+                        <p class="text-xs text-slate-400">ID: @selectedReport.ReportId.ToString()[..8]…</p>
+                    </div>
+                </div>
+                <button @onclick="CloseDetail"
+                        class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-slate-500"></i>
+                </button>
+            </div>
+
+            <div class="px-6 py-5 space-y-5">
+
+                <!-- Reporter info -->
+                <div class="bg-slate-50 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-slate-400 uppercase mb-2">Người báo cáo</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-fuchsia-100 rounded-full flex items-center justify-center text-fuchsia-600 font-bold">
+                            @GetInitial(selectedReport.Reporter?.Username)
+                        </div>
+                        <div>
+                            <p class="font-semibold text-slate-800">@(selectedReport.Reporter?.Username ?? "—")</p>
+                            <p class="text-sm text-slate-500">@(selectedReport.Reporter?.Email ?? "")</p>
+                        </div>
+                        <span class="ml-auto @GetStatusBadge(selectedReport.Status) px-2.5 py-1 rounded-full text-xs font-semibold">
+                            @GetStatusLabel(selectedReport.Status)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Report metadata -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-xs font-semibold text-slate-400 uppercase mb-1">Loại nội dung vi phạm</p>
+                        <span class="@GetTargetTypeBadge(selectedReport.TargetType) px-2.5 py-1 rounded-full text-xs font-semibold">
+                            @GetTargetTypeLabel(selectedReport.TargetType)
+                        </span>
+                    </div>
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-xs font-semibold text-slate-400 uppercase mb-1">Ngày báo cáo</p>
+                        <p class="text-sm font-medium text-slate-800">@selectedReport.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                </div>
+
+                <!-- Reason -->
+                <div class="bg-slate-50 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-slate-400 uppercase mb-2">Lý do vi phạm</p>
+                    <p class="text-sm text-slate-700 leading-relaxed">@selectedReport.Reason</p>
+                </div>
+
+                <!-- Target ID -->
+                <div class="bg-slate-50 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-slate-400 uppercase mb-2">
+                        ID nội dung bị báo cáo
+                    </p>
+                    <p class="text-xs font-mono text-slate-600 break-all">@selectedReport.TargetId</p>
+                </div>
+
+                <!-- Resolved outcome — if already handled -->
+                @if (selectedReport.Status != "PENDING" && selectedReport.AuditLogs.Any())
+                {
+                    var log = selectedReport.AuditLogs.OrderByDescending(a => a.CreatedAt).First();
+                    <div class="border @(selectedReport.Status == "RESOLVED" ? "border-green-200 bg-green-50" : "border-slate-200 bg-slate-50") rounded-xl p-4">
+                        <p class="text-xs font-semibold @(selectedReport.Status == "RESOLVED" ? "text-green-600" : "text-slate-500") uppercase mb-3">Kết quả xử lý</p>
+                        <div class="flex items-center gap-3">
+                            <i class="@actions[log.Action].Icon text-xl @(selectedReport.Status == "RESOLVED" ? "text-green-600" : "text-slate-500")"></i>
+                            <div>
+                                <p class="font-semibold text-slate-800">@actions[log.Action].Label</p>
+                                <p class="text-xs text-slate-500">
+                                    Bởi @(log.Actor?.Username ?? "Admin")
+                                    • @log.CreatedAt.ToString("dd/MM/yyyy")
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Action section — only if PENDING -->
+                @if (selectedReport.Status == "PENDING")
+                {
+                    <div class="border border-fuchsia-200 bg-fuchsia-50 rounded-xl p-4">
+                        <p class="text-xs font-semibold text-fuchsia-600 uppercase mb-3">Chọn hành động xử lý</p>                        <div class="grid grid-cols-1 gap-2">
+                            @foreach (var act in actions)
+                            {
+                                <button @onclick="() => SelectAction(act.Key)"
+                                        class="@(selectedAction == act.Key ? "ring-2 ring-offset-1 ring-fuchsia-500 " : "") @act.Value.Css flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-left transition w-full">
+                                    <i class="@act.Value.Icon w-5 text-center"></i>
+                                    <div>
+                                        <span class="font-semibold">@act.Value.Label</span>
+                                        <p class="text-xs opacity-75">@act.Value.Description</p>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Modal footer -->
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-2xl">
+                <button @onclick="CloseDetail"
+                        class="px-5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition text-sm">
+                    Đóng
+                </button>
+                @if (selectedReport.Status == "PENDING" && !string.IsNullOrEmpty(selectedAction))
+                {
+                    <button @onclick="OpenConfirm"
+                            class="px-5 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold transition text-sm shadow-sm">
+                        <i class="fa-solid fa-check mr-2"></i>Xác nhận hành động
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
 }
-else
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CONFIRMATION DIALOG
+════════════════════════════════════════════════════════════════ -->
+@if (showConfirm && selectedReport != null && !string.IsNullOrEmpty(selectedAction))
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Report ID</th>
-                <th>Reporter</th>
-                <th>Reason</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var report in reports)
-            {
-                <tr>
-                    <td>@report.ReportId</td>
-                    <td>@report.Reporter?.Username</td>
-                    <td>@report.Reason</td>
-                    <td>
-                        <button class="btn btn-sm btn-success" @onclick="() => ResolveReport(report.ReportId)">Resolve</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] p-4"
+         @onclick="CloseConfirm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+             @onclick:stopPropagation="true">
+
+            <div class="p-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">Xác Nhận Hành Động</h3>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 mb-4 space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Báo cáo</span>
+                        <span class="font-mono text-slate-700 text-xs">@selectedReport.ReportId.ToString()[..8]…</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Loại nội dung</span>
+                        <span class="font-medium text-slate-700">@GetTargetTypeLabel(selectedReport.TargetType)</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Hành động</span>
+                        <span class="font-semibold text-fuchsia-700">@actions[selectedAction].Label</span>
+                    </div>
+                </div>
+
+                <p class="text-sm text-slate-600 mb-5">
+                    Hành động này sẽ được ghi lại cùng với thông tin của bạn và timestamp. Người báo cáo sẽ nhận được thông báo kết quả.
+                </p>
+
+                <div class="flex gap-3">
+                    <button @onclick="CloseConfirm"
+                            class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition text-sm">
+                        Hủy
+                    </button>
+                    <button @onclick="ExecuteAction" disabled="@isProcessing"
+                            class="flex-1 px-4 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-lg font-semibold transition text-sm shadow-sm disabled:opacity-60">
+                        @if (isProcessing)
+                        {
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+                        }
+                        else
+                        {
+                            <i class="fa-solid fa-check mr-2"></i>
+                        }
+                        Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
-    private IEnumerable<Models.Report>? reports;
+    // ── State ────────────────────────────────────────────────────────────────
+    private User? currentUser;
+    private List<Report> allReports = new();
+    private bool isLoading = true;
+    private string message = "";
+    private bool isError = false;
+    private bool isProcessing = false;
 
+    // Counts
+    private int pendingCount;
+    private int resolvedCount;
+    private int rejectedCount;
+
+    // Filters
+    private string activeTab = "PENDING";
+    private string typeFilter = "";
+    private string searchQuery = "";
+
+    // Detail modal
+    private bool showDetail = false;
+    private Report? selectedReport;
+    private string selectedAction = "";
+
+    // Confirm dialog
+    private bool showConfirm = false;
+
+    // ── Action definitions ────────────────────────────────────────────────────
+    private readonly Dictionary<string, (string Label, string Description, string Icon, string Css)> actions = new()
+    {
+        ["DISMISS"]         = ("Bác bỏ (không vi phạm)",    "Không có vi phạm, đóng báo cáo",          "fa-solid fa-ban",              "bg-slate-100 hover:bg-slate-200 text-slate-700"),
+        ["WARN_USER"]       = ("Cảnh cáo người dùng",       "Gửi cảnh báo đến tài khoản vi phạm",       "fa-solid fa-triangle-exclamation", "bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200"),
+        ["HIDE_CONTENT"]    = ("Ẩn nội dung",               "Ẩn ảnh/bình luận khỏi cộng đồng",          "fa-solid fa-eye-slash",        "bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200"),
+        ["REMOVE_CONTENT"]  = ("Xóa nội dung",              "Xóa vĩnh viễn nội dung vi phạm",           "fa-solid fa-trash",            "bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200"),
+        ["SUSPEND_ACCOUNT"] = ("Khóa tài khoản",            "Đình chỉ tài khoản của người vi phạm",     "fa-solid fa-user-slash",       "bg-red-50 hover:bg-red-100 text-red-800 border border-red-200"),
+    };
+
+    // ── Computed ──────────────────────────────────────────────────────────────
+    private IEnumerable<Report> FilteredReports => allReports
+        .Where(r => activeTab == "ALL" || r.Status == activeTab)
+        .Where(r => string.IsNullOrEmpty(typeFilter) || r.TargetType == typeFilter)
+        .Where(r => string.IsNullOrEmpty(searchQuery) ||
+                    (r.Reason?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (r.Reporter?.Username?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
     {
-        reports = await ModerationService.GetAllReportsAsync();
+        currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser?.Role != "ADMIN")
+        {
+            Navigation.NavigateTo("/", true);
+            return;
+        }
+        await LoadData();
     }
 
-    private async Task ResolveReport(Guid reportId)
+    private async Task LoadData()
     {
-        await ModerationService.ResolveReportAsync(reportId);
-        reports = await ModerationService.GetAllReportsAsync();
+        isLoading = true;
+        try
+        {
+            allReports = (await ModerationService.GetAllReportsAsync()).ToList();
+            pendingCount   = allReports.Count(r => r.Status == "PENDING");
+            resolvedCount  = allReports.Count(r => r.Status == "RESOLVED");
+            rejectedCount  = allReports.Count(r => r.Status == "REJECTED");
+        }
+        catch (Exception ex)
+        {
+            message = $"Lỗi tải dữ liệu: {ex.InnerException?.Message ?? ex.Message}";
+            isError = true;
+            allReports = new();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
+
+    // ── Tabs / Filters ────────────────────────────────────────────────────────
+    private void SetTab(string tab)
+    {
+        activeTab = tab;
+        message = "";
+    }
+
+    // ── Detail modal ──────────────────────────────────────────────────────────
+    private void OpenDetail(Report report)
+    {
+        selectedReport = report;
+        selectedAction = "";
+        showDetail = true;
+        message = "";
+    }
+
+    private void CloseDetail()
+    {
+        showDetail = false;
+        selectedReport = null;
+        selectedAction = "";
+    }
+
+    private void SelectAction(string action) => selectedAction = action;
+
+    // ── Confirm dialog ────────────────────────────────────────────────────────
+    private void OpenConfirm()  => showConfirm = true;
+    private void CloseConfirm() => showConfirm = false;
+
+    private async Task ExecuteAction()
+    {
+        if (selectedReport == null || string.IsNullOrEmpty(selectedAction) || currentUser == null)
+            return;
+
+        isProcessing = true;
+        try
+        {
+            bool ok = await ModerationService.ResolveReportAsync(
+                selectedReport.ReportId, selectedAction, currentUser.UserId);
+
+            if (ok)
+            {
+                message = $"✓ Đã xử lý báo cáo: {actions[selectedAction].Label}";
+                isError = false;
+            }
+            else
+            {
+                message = "Không thể xử lý báo cáo này. Bạn không thể xử lý báo cáo của chính mình.";
+                isError = true;
+            }
+
+            showConfirm = false;
+            CloseDetail();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            message = $"Lỗi: {ex.InnerException?.Message ?? ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    // ── Helper formatting ─────────────────────────────────────────────────────
+    private static string GetInitial(string? username)
+        => string.IsNullOrEmpty(username) ? "?" : username[0].ToString().ToUpper();
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "PENDING"  => "Chờ xử lý",
+        "RESOLVED" => "Đã xử lý",
+        "REJECTED" => "Bác bỏ",
+        _          => status
+    };
+
+    private static string GetStatusBadge(string status) => status switch
+    {
+        "PENDING"  => "bg-yellow-100 text-yellow-700",
+        "RESOLVED" => "bg-green-100 text-green-700",
+        "REJECTED" => "bg-slate-100 text-slate-600",
+        _          => "bg-slate-100 text-slate-600"
+    };
+
+    private static string GetTargetTypeLabel(string t) => t switch
+    {
+        "PHOTO"   => "Ảnh",
+        "COMMENT" => "Bình luận",
+        "USER"    => "Tài khoản",
+        _         => t
+    };
+
+    private static string GetTargetTypeBadge(string t) => t switch
+    {
+        "PHOTO"   => "bg-purple-100 text-purple-700",
+        "COMMENT" => "bg-blue-100 text-blue-700",
+        "USER"    => "bg-red-100 text-red-700",
+        _         => "bg-slate-100 text-slate-600"
+    };
 }
