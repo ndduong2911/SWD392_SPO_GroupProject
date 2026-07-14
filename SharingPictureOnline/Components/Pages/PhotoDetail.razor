@@ -1,98 +1,133 @@
-﻿@page "/photo/{PhotoId:guid}"
+@page "/photo/{Id:guid}"
+@using SharingPictureOnline.Models
 @using SharingPictureOnline.Services
 @inject IPhotoService PhotoService
+@inject ISocialService SocialService
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
-<PageTitle>@(photo?.Title ?? "Chi tiết ảnh") | FakePinterest</PageTitle>
+<PageTitle>Chi Tiết Ảnh | FakePinterest</PageTitle>
 
-@if (isLoading)
+@if (photo == null)
 {
-    <div class="min-h-screen flex items-center justify-center">
-        <div class="text-center">
-            <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600 mb-4"></i>
-            <p class="text-slate-500">Đang tải ảnh...</p>
-        </div>
-    </div>
-}
-else if (photo == null)
-{
-    <div class="min-h-screen flex items-center justify-center">
-        <div class="text-center py-20">
-            <i class="fa-solid fa-image-slash text-6xl text-slate-300 mb-4"></i>
-            <h3 class="text-2xl font-bold text-slate-800 mb-2">Không tìm thấy ảnh</h3>
-            <p class="text-slate-500 mb-6">Bức ảnh này có thể đã bị xóa hoặc không tồn tại.</p>
-            <button @onclick="GoBack" class="px-6 py-2 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-full font-medium transition shadow-md">
-                <i class="fa-solid fa-arrow-left mr-2"></i>Quay lại trang chủ
-            </button>
-        </div>
+    <div class="flex justify-center items-center h-96">
+        <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600"></i>
     </div>
 }
 else
 {
-    <div class="max-w-6xl mx-auto px-4 py-8 bg-slate-50 min-h-screen">
-        <button class="mb-6 w-10 h-10 rounded-full bg-white shadow-sm hover:shadow-md hover:bg-slate-50 flex items-center justify-center transition"
-                @onclick="GoBack">
-            <i class="fa-solid fa-arrow-left text-slate-700"></i>
-        </button>
-
-        <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col lg:flex-row">
-
-            <div class="lg:w-1/2 bg-slate-100 flex items-center justify-center min-h-[300px]">
-                <img src="@GetImageUrl(photo.StorageKey)"
-                     alt="@photo.Title"
-                     class="w-full h-auto max-h-[85vh] object-contain" />
+    <div class="max-w-6xl mx-auto p-4 md:py-8">
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+            <!-- Left Side: Image -->
+            <div class="w-full md:w-1/2 bg-slate-100 flex items-center justify-center p-4">
+                <img src="@photo.StorageKey" alt="@photo.Title" class="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-sm" />
             </div>
 
-            <div class="lg:w-1/2 p-6 md:p-8 flex flex-col max-h-[85vh] overflow-y-auto custom-scrollbar">
-
-                <div class="flex items-center justify-between mb-6 pb-6 border-b border-slate-100">
-                    <div class="flex gap-3">
-                        <button class="flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition
-                                           @(isLiked ? "bg-fuchsia-100 text-fuchsia-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200")"
-                                @onclick="ToggleLike">
-                            <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart text-lg"></i>
-                            <span>@likeCount</span>
-                        </button>
+            <!-- Right Side: Details & Comments -->
+            <div class="w-full md:w-1/2 flex flex-col max-h-[80vh]">
+                <!-- Header -->
+                <div class="p-6 border-b border-slate-100 shrink-0">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-3 cursor-pointer group" @onclick="GoToProfile">
+                            <div class="w-12 h-12 bg-fuchsia-100 text-fuchsia-600 rounded-full flex items-center justify-center font-bold text-xl uppercase overflow-hidden border-2 border-slate-200 group-hover:border-fuchsia-300 transition">
+                                @if (!string.IsNullOrEmpty(photo.User?.UserProfile?.AvatarUrl))
+                                {
+                                    <img src="@photo.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
+                                }
+                                else
+                                {
+                                    @(photo.User?.Username?.FirstOrDefault() ?? 'U')
+                                }
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-slate-900 text-lg group-hover:text-fuchsia-600 transition">@(photo.User?.Username ?? "Anonymous")</h2>
+                                <p class="text-sm text-slate-500">@photo.UploadedAt.ToLocalTime().ToString("dd MMM yyyy")</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <button @onclick="ToggleLike" class="flex items-center gap-2 group transition-colors @(isLiked ? "text-red-500" : "text-slate-500 hover:text-red-500")">
+                                <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart text-3xl group-hover:scale-110 transition-transform"></i>
+                                <span class="font-bold text-xl">@photo.LikeCount</span>
+                            </button>
+                        </div>
                     </div>
-                    <button class="px-6 py-2.5 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-full font-semibold transition shadow-md">
-                        Lưu
-                    </button>
-                </div>
-
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-slate-900 mb-3">@photo.Title</h1>
+                    <h1 class="text-2xl font-bold text-slate-900 mb-2">@photo.Title</h1>
                     @if (!string.IsNullOrEmpty(photo.Description))
                     {
-                        <p class="text-slate-600 leading-relaxed">@photo.Description</p>
+                        <p class="text-slate-600 whitespace-pre-wrap">@photo.Description</p>
                     }
                 </div>
 
-                <div class="flex items-center justify-between bg-slate-50 p-4 rounded-2xl mb-8">
-                    <div class="flex items-center gap-3 cursor-pointer group" @onclick="GoToProfile">
-                        <div class="w-12 h-12 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-sm group-hover:border-fuchsia-300 transition">
-                            @if (!string.IsNullOrEmpty(photo.User?.UserProfile?.AvatarUrl))
-                            {
-                                <img src="@photo.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
-                            }
-                            else
-                            {
-                                <i class="fa-solid fa-user text-slate-400"></i>
-                            }
-                        </div>
-                        <div>
-                            <p class="font-bold text-slate-900 group-hover:text-fuchsia-600 transition">
-                                @(photo.User?.Username ?? "Anonymous")
-                            </p>
-                            <p class="text-xs text-slate-500">@photo.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy")</p>
-                        </div>
-                    </div>
+                <!-- Comments List -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
+                    <h3 class="font-bold text-slate-900 flex items-center gap-2 mb-4 text-lg">
+                        <i class="fa-regular fa-comment-dots"></i> 
+                        Bình luận (@photo.CommentCount)
+                    </h3>
 
-                    @if (currentUser != null && currentUser.UserId != photo.UserId)
+                    @if (!comments.Any())
                     {
-                        <button class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-full font-medium transition text-sm">
-                            Theo dõi
-                        </button>
+                        <p class="text-slate-500 text-center py-8">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+                    }
+                    else
+                    {
+                        @foreach (var c in comments)
+                        {
+                            <div class="flex gap-3">
+                                <div class="w-10 h-10 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0 uppercase overflow-hidden">
+                                    @if (!string.IsNullOrEmpty(c.User?.UserProfile?.AvatarUrl))
+                                    {
+                                        <img src="@c.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
+                                    }
+                                    else
+                                    {
+                                        @(c.User?.Username?.FirstOrDefault() ?? 'U')
+                                    }
+                                </div>
+                                <div class="flex-1">
+                                    <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100">
+                                        <p class="font-bold text-sm text-slate-900 mb-1">@(c.User?.Username ?? "User")</p>
+                                        <p class="text-slate-700 text-sm whitespace-pre-wrap">@c.Content</p>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1 ml-1">@c.CreatedAt.ToString("g")</p>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <!-- Comment Input -->
+                <div class="p-4 border-t border-slate-100 shrink-0 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                    @if (currentUser != null)
+                    {
+                        <form @onsubmit="SubmitComment" @onsubmit:preventDefault class="flex gap-3">
+                            <div class="w-10 h-10 bg-fuchsia-600 text-white rounded-full flex items-center justify-center font-bold shrink-0 uppercase overflow-hidden">
+                                @if (!string.IsNullOrEmpty(currentUser.UserProfile?.AvatarUrl))
+                                {
+                                    <img src="@currentUser.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
+                                }
+                                else
+                                {
+                                    @(currentUser.Username?.FirstOrDefault() ?? 'U')
+                                }
+                            </div>
+                            <div class="flex-1 flex gap-2">
+                                <input type="text" @bind="newCommentText" 
+                                       placeholder="Thêm bình luận..." 
+                                       class="w-full bg-slate-100 border-transparent rounded-full px-4 py-2 focus:bg-white focus:border-fuchsia-300 focus:ring-2 focus:ring-fuchsia-100 transition-all">
+                                <button type="submit" disabled="@string.IsNullOrWhiteSpace(newCommentText)" 
+                                        class="bg-fuchsia-600 text-white px-4 rounded-full font-bold hover:bg-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="text-center p-4 bg-slate-100 rounded-xl">
+                            <p class="text-slate-600 mb-2">Đăng nhập để tham gia bình luận và thả tim ảnh nhé!</p>
+                            <a href="/login" class="inline-block bg-slate-900 text-white px-6 py-2 rounded-full font-bold hover:bg-slate-800 transition">Đăng nhập ngay</a>
+                        </div>
                     }
                 </div>
             </div>
@@ -102,50 +137,30 @@ else
 
 @code {
     [Parameter]
-    public Guid PhotoId { get; set; }
+    public Guid Id { get; set; }
 
-    private Models.Photo? photo;
-    private Models.User? currentUser;
-    private bool isLoading = true;
+    private Photo? photo;
+    private IEnumerable<Comment> comments = new List<Comment>();
+    private User? currentUser;
     private bool isLiked = false;
-    private int likeCount = 0;
+    private string newCommentText = "";
 
     protected override async Task OnInitializedAsync()
     {
-        try
+        photo = await PhotoService.GetPhotoByIdAsync(Id);
+        if (photo == null)
         {
-            isLoading = true;
-
-            // Lấy thông tin user hiện tại bằng AuthService giống như bên Profile.razor
-            currentUser = await AuthService.GetCurrentUserAsync();
-
-            // Gọi hàm lấy chi tiết ảnh
-            // Giả định trong IPhotoService của bạn có hàm GetPhotoByIdAsync
-            photo = await PhotoService.GetPhotoByIdAsync(PhotoId);
-
-            if (photo != null)
-            {
-                likeCount = photo.LikeCount;
-                // Nếu bạn có hàm kiểm tra Like, bỏ comment đoạn dưới:
-                // if (currentUser != null)
-                // {
-                //    isLiked = await PhotoService.IsLikedByUserAsync(PhotoId, currentUser.UserId);
-                // }
-            }
+            Navigation.NavigateTo("/");
+            return;
         }
-        catch (Exception ex)
+
+        comments = await SocialService.GetCommentsByPhotoIdAsync(Id);
+        currentUser = await AuthService.GetCurrentUserAsync();
+
+        if (currentUser != null)
         {
-            Console.WriteLine($"Error loading photo: {ex.Message}");
+            isLiked = await SocialService.HasLikedAsync(currentUser.UserId, Id);
         }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private void GoBack()
-    {
-        Navigation.NavigateTo("/");
     }
 
     private void GoToProfile()
@@ -156,28 +171,51 @@ else
         }
     }
 
-    private string GetImageUrl(string storageKey)
-    {
-        // Xử lý link ảnh tương tự bên Home.razor
-        return storageKey;
-    }
-
     private async Task ToggleLike()
     {
         if (currentUser == null)
         {
-            // Nếu chưa đăng nhập thì chuyển hướng ra trang login
             Navigation.NavigateTo("/login");
             return;
         }
 
-        // Bỏ comment nếu có hàm ToggleLikeAsync trong IPhotoService
-        // var (nowLiked, newCount) = await PhotoService.ToggleLikeAsync(PhotoId, currentUser.UserId);
-        // isLiked = nowLiked;
-        // likeCount = newCount;
+        if (isLiked)
+        {
+            var success = await SocialService.UnlikePhotoAsync(currentUser.UserId, Id);
+            if (success)
+            {
+                isLiked = false;
+                photo = await PhotoService.GetPhotoByIdAsync(Id);
+            }
+        }
+        else
+        {
+            var success = await SocialService.LikePhotoAsync(currentUser.UserId, Id);
+            if (success)
+            {
+                isLiked = true;
+                photo = await PhotoService.GetPhotoByIdAsync(Id);
+            }
+        }
+    }
 
-        // Code tạm (Mock)
-        isLiked = !isLiked;
-        likeCount += isLiked ? 1 : -1;
+    private async Task SubmitComment()
+    {
+        if (currentUser == null || string.IsNullOrWhiteSpace(newCommentText) || photo == null) return;
+
+        var comment = new Comment
+        {
+            CommentId = Guid.NewGuid(),
+            UserId = currentUser.UserId,
+            PhotoId = Id,
+            Content = newCommentText
+        };
+
+        await SocialService.AddCommentAsync(comment);
+        
+        // Refresh comments and photo details
+        comments = await SocialService.GetCommentsByPhotoIdAsync(Id);
+        photo = await PhotoService.GetPhotoByIdAsync(Id);
+        newCommentText = "";
     }
 }
