@@ -5,6 +5,9 @@
 @inject ISocialService SocialService
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject NotificationStateService NotificationState
+@inject IServiceProvider ServiceProvider
+@implements IDisposable
 
 <PageTitle>Chi Tiết Ảnh | FakePinterest</PageTitle>
 
@@ -73,31 +76,82 @@ else
                     {
                         @foreach (var c in comments)
                         {
-                            <div class="flex gap-3">
-                                <div class="w-10 h-10 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0 uppercase overflow-hidden">
-                                    @if (!string.IsNullOrEmpty(c.User?.UserProfile?.AvatarUrl))
-                                    {
-                                        <img src="@c.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
-                                    }
-                                    else
-                                    {
-                                        @(c.User?.Username?.FirstOrDefault() ?? 'U')
-                                    }
-                                </div>
-                                <div class="flex-1">
-                                    <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100">
-                                        <p class="font-bold text-sm text-slate-900 mb-1">@(c.User?.Username ?? "User")</p>
-                                        <p class="text-slate-700 text-sm whitespace-pre-wrap">@c.Content</p>
+                            <div class="flex flex-col gap-2">
+                                <!-- Original comment -->
+                                <div class="flex gap-3">
+                                    <div class="w-10 h-10 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0 uppercase overflow-hidden">
+                                        @if (!string.IsNullOrEmpty(c.User?.UserProfile?.AvatarUrl))
+                                        {
+                                            <img src="@c.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
+                                        }
+                                        else
+                                        {
+                                            @(c.User?.Username?.FirstOrDefault() ?? 'U')
+                                        }
                                     </div>
-                                    <p class="text-xs text-slate-400 mt-1 ml-1">@c.CreatedAt.ToString("g")</p>
+                                    <div class="flex-1">
+                                        <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 inline-block">
+                                            <p class="font-bold text-sm text-slate-900 mb-1">@(c.User?.Username ?? "User")</p>
+                                            <p class="text-slate-700 text-sm whitespace-pre-wrap">@c.Content</p>
+                                        </div>
+                                        <div class="flex items-center gap-4 mt-1 ml-2 text-xs text-slate-400">
+                                            <span>@c.CreatedAt.ToString("g")</span>
+                                            @if (currentUser != null)
+                                            {
+                                                <button @onclick="() => StartReply(c)" class="font-semibold text-slate-500 hover:text-fuchsia-600 transition">Phản hồi</button>
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
+
+                                <!-- Replies -->
+                                @if (c.InverseParent != null && c.InverseParent.Any())
+                                {
+                                    <div class="ml-10 space-y-3 mt-2">
+                                        @foreach (var reply in c.InverseParent.OrderBy(r => r.CreatedAt))
+                                        {
+                                            <div class="flex gap-3">
+                                                <div class="w-8 h-8 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-bold text-xs shrink-0 uppercase overflow-hidden">
+                                                    @if (!string.IsNullOrEmpty(reply.User?.UserProfile?.AvatarUrl))
+                                                    {
+                                                        <img src="@reply.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
+                                                    }
+                                                    else
+                                                    {
+                                                        @(reply.User?.Username?.FirstOrDefault() ?? 'U')
+                                                    }
+                                                </div>
+                                                <div class="flex-1">
+                                                    <div class="bg-white p-2.5 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 inline-block">
+                                                        <p class="font-bold text-sm text-slate-900 mb-1">@(reply.User?.Username ?? "User")</p>
+                                                        <p class="text-slate-700 text-sm whitespace-pre-wrap">@reply.Content</p>
+                                                    </div>
+                                                    <div class="flex items-center gap-4 mt-1 ml-2 text-xs text-slate-400">
+                                                        <span>@reply.CreatedAt.ToString("g")</span>
+                                                        @if (currentUser != null)
+                                                        {
+                                                            <button @onclick="() => StartReplyToReply(c, reply)" class="font-semibold text-slate-500 hover:text-fuchsia-600 transition">Phản hồi</button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
                             </div>
                         }
                     }
                 </div>
 
                 <!-- Comment Input -->
-                <div class="p-4 border-t border-slate-100 shrink-0 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <div class="p-4 border-t border-slate-100 shrink-0 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] relative">
+                    @if (replyingToCommentId != null)
+                    {
+                        <div class="absolute -top-8 left-4 bg-fuchsia-100 text-fuchsia-800 text-xs px-3 py-1.5 rounded-t-lg font-medium flex items-center gap-2 border border-b-0 border-fuchsia-200 shadow-sm z-10">
+                            <span>Đang phản hồi <strong>@replyingToUsername</strong></span>
+                            <button type="button" @onclick="CancelReply" class="hover:text-fuchsia-900 w-4 h-4 flex items-center justify-center rounded-full hover:bg-fuchsia-200 transition"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    }
                     @if (currentUser != null)
                     {
                         <form @onsubmit="SubmitComment" @onsubmit:preventDefault class="flex gap-3">
@@ -113,7 +167,7 @@ else
                             </div>
                             <div class="flex-1 flex gap-2">
                                 <input type="text" @bind="newCommentText" 
-                                       placeholder="Thêm bình luận..." 
+                                       placeholder="@(replyingToCommentId == null ? "Thêm bình luận..." : $"Viết phản hồi cho {replyingToUsername}...")" 
                                        class="w-full bg-slate-100 border-transparent rounded-full px-4 py-2 focus:bg-white focus:border-fuchsia-300 focus:ring-2 focus:ring-fuchsia-100 transition-all">
                                 <button type="submit" disabled="@string.IsNullOrWhiteSpace(newCommentText)" 
                                         class="bg-fuchsia-600 text-white px-4 rounded-full font-bold hover:bg-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
@@ -144,6 +198,8 @@ else
     private User? currentUser;
     private bool isLiked = false;
     private string newCommentText = "";
+    private Guid? replyingToCommentId;
+    private string replyingToUsername = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -161,6 +217,29 @@ else
         {
             isLiked = await SocialService.HasLikedAsync(currentUser.UserId, Id);
         }
+
+        NotificationState.OnPhotoUpdated += HandlePhotoUpdated;
+    }
+
+    private async void HandlePhotoUpdated(Guid updatedPhotoId)
+    {
+        if (updatedPhotoId == Id)
+        {
+            await InvokeAsync(async () => {
+                using var scope = ServiceProvider.CreateScope();
+                var scopedPhotoService = scope.ServiceProvider.GetRequiredService<IPhotoService>();
+                var scopedSocialService = scope.ServiceProvider.GetRequiredService<ISocialService>();
+                
+                photo = await scopedPhotoService.GetPhotoByIdAsync(Id);
+                comments = await scopedSocialService.GetCommentsByPhotoIdAsync(Id);
+                StateHasChanged();
+            });
+        }
+    }
+
+    public void Dispose()
+    {
+        NotificationState.OnPhotoUpdated -= HandlePhotoUpdated;
     }
 
     private void GoToProfile()
@@ -182,21 +261,32 @@ else
         if (isLiked)
         {
             var success = await SocialService.UnlikePhotoAsync(currentUser.UserId, Id);
-            if (success)
-            {
-                isLiked = false;
-                photo = await PhotoService.GetPhotoByIdAsync(Id);
-            }
+            if (success) isLiked = false;
         }
         else
         {
             var success = await SocialService.LikePhotoAsync(currentUser.UserId, Id);
-            if (success)
-            {
-                isLiked = true;
-                photo = await PhotoService.GetPhotoByIdAsync(Id);
-            }
+            if (success) isLiked = true;
         }
+    }
+
+    private void StartReply(Comment parentComment)
+    {
+        replyingToCommentId = parentComment.CommentId;
+        replyingToUsername = parentComment.User?.Username ?? "User";
+    }
+
+    private void StartReplyToReply(Comment rootComment, Comment reply)
+    {
+        replyingToCommentId = rootComment.CommentId;
+        replyingToUsername = reply.User?.Username ?? "User";
+        newCommentText = $"@{replyingToUsername} ";
+    }
+
+    private void CancelReply()
+    {
+        replyingToCommentId = null;
+        replyingToUsername = "";
     }
 
     private async Task SubmitComment()
@@ -208,14 +298,12 @@ else
             CommentId = Guid.NewGuid(),
             UserId = currentUser.UserId,
             PhotoId = Id,
-            Content = newCommentText
+            Content = newCommentText,
+            ParentId = replyingToCommentId
         };
 
         await SocialService.AddCommentAsync(comment);
-        
-        // Refresh comments and photo details
-        comments = await SocialService.GetCommentsByPhotoIdAsync(Id);
-        photo = await PhotoService.GetPhotoByIdAsync(Id);
         newCommentText = "";
+        CancelReply();
     }
 }

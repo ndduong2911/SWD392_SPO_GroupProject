@@ -1,4 +1,4 @@
-﻿namespace SharingPictureOnline.Services
+namespace SharingPictureOnline.Services
 {
     public class NotificationStateService
     {
@@ -13,6 +13,12 @@
         public void NotifyFollowStatsChanged(Guid targetUserId)
         {
             OnFollowStatsChanged?.Invoke(targetUserId);
+        }
+        // THÊM KÊNH 3: Dành cho việc cập nhật số Like/Comment của 1 bức ảnh realtime
+        public event Action<Guid>? OnPhotoUpdated;
+        public void NotifyPhotoUpdated(Guid photoId)
+        {
+            OnPhotoUpdated?.Invoke(photoId);
         }
     }
 }

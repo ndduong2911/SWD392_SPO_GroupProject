@@ -10,18 +10,21 @@ public class SocialService : ISocialService
     private readonly IFollowRepository _followRepository;
     private readonly IPhotoRepository _photoRepository;
     private readonly INotificationService _notificationService;
+    private readonly NotificationStateService _notificationState;
 
     public SocialService(ILikeRepository likeRepository, 
                          ICommentRepository commentRepository, 
                          IFollowRepository followRepository,
                          IPhotoRepository photoRepository,
-                         INotificationService notificationService)
+                         INotificationService notificationService,
+                         NotificationStateService notificationState)
     {
         _likeRepository = likeRepository;
         _commentRepository = commentRepository;
         _followRepository = followRepository;
         _photoRepository = photoRepository;
         _notificationService = notificationService;
+        _notificationState = notificationState;
     }
 
     public async Task<bool> LikePhotoAsync(Guid userId, Guid photoId)
@@ -41,6 +44,9 @@ public class SocialService : ISocialService
                 {
                     await _notificationService.CreateLikeNotificationAsync(photo.UserId, userId);
                 }
+                
+                // Kích hoạt cập nhật Real-time cho mọi người đang xem ảnh này
+                _notificationState.NotifyPhotoUpdated(photoId);
             }
             return true;
         }
@@ -57,6 +63,9 @@ public class SocialService : ISocialService
             {
                 photo.LikeCount = Math.Max(0, photo.LikeCount - 1);
                 await _photoRepository.UpdateAsync(photo);
+                
+                // Kích hoạt cập nhật Real-time cho mọi người đang xem ảnh này
+                _notificationState.NotifyPhotoUpdated(photoId);
             }
         }
         return success;
@@ -83,6 +92,9 @@ public class SocialService : ISocialService
                 {
                     await _notificationService.CreateCommentNotificationAsync(photo.UserId, comment.UserId);
                 }
+                
+                // Kích hoạt cập nhật Real-time cho mọi người đang xem ảnh này
+                _notificationState.NotifyPhotoUpdated(comment.PhotoId);
             }
         }
         return added!;
