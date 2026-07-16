@@ -127,7 +127,7 @@ CREATE TABLE [FOLLOW] (
 CREATE TABLE [NOTIFICATION] (
     [notifID] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
     [userID] UNIQUEIDENTIFIER NOT NULL,
-    [type] VARCHAR(50) NOT NULL CONSTRAINT CHK_Notif_Type CHECK ([type] IN ('LIKE', 'COMMENT', 'FOLLOW', 'SYSTEM')),
+    [type] VARCHAR(50) NOT NULL CONSTRAINT CHK_Notif_Type CHECK ([type] IN ('LIKE', 'COMMENT', 'FOLLOW', 'SYSTEM', 'REPORT')),
     [refID] UNIQUEIDENTIFIER NULL, -- ID trỏ tới đối tượng phát sinh thông báo (photoID, commentID, v.v.)
     [isRead] BIT NOT NULL DEFAULT 0, -- Dùng BIT thay thế cho Boolean
     [createdAt] DATETIME NOT NULL DEFAULT GETDATE(),

@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @using SharingPictureOnline.Services
 @inject IAuthService AuthService
+@inject INotificationService NotificationService
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -24,9 +25,81 @@
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                         <span>Upload</span>
                     </a>
-                    <button class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
-                        <i class="fa-solid fa-bell text-slate-600"></i>
-                    </button>
+                    <div class="relative">
+                        <button @onclick="ToggleNotifMenu"
+                                class="relative w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition">
+                            <i class="fa-solid fa-bell text-slate-600"></i>
+                            @if (unreadCount > 0)
+                            {
+                                <span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    @(unreadCount > 99 ? "99+" : unreadCount.ToString())
+                                </span>
+                            }
+                        </button>
+                        @if (showNotifMenu)
+                        {
+                            <div class="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                                <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
+                                    <p class="text-sm font-semibold text-slate-800">Thông báo</p>
+                                    @if (unreadCount > 0)
+                                    {
+                                        <button @onclick="MarkAllReadAsync"
+                                                class="text-xs text-fuchsia-600 hover:text-fuchsia-700 font-medium">
+                                            Đánh dấu đã đọc
+                                        </button>
+                                    }
+                                </div>
+                                <div class="max-h-96 overflow-y-auto">
+                                    @if (notifications == null)
+                                    {
+                                        <div class="px-4 py-8 text-center text-sm text-slate-400">
+                                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang tải...
+                                        </div>
+                                    }
+                                    else if (notifications.Count == 0)
+                                    {
+                                        <div class="px-4 py-8 text-center text-sm text-slate-400">
+                                            <i class="fa-regular fa-bell-slash text-2xl mb-2 block"></i>
+                                            Chưa có thông báo nào
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var n in notifications)
+                                        {
+                                            <button @onclick="() => OnNotifClickAsync(n)"
+                                                    class="w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition flex gap-3 @(n.IsRead ? "" : "bg-fuchsia-50/60")">
+                                                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 @(n.Type == "REPORT" || n.StatusLabel == "Bác bỏ" ? "bg-slate-100 text-slate-600" : "bg-fuchsia-100 text-fuchsia-600")">
+                                                    <i class="@n.Icon text-sm"></i>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-start justify-between gap-2">
+                                                        <p class="text-sm font-semibold text-slate-800">@n.Title</p>
+                                                        @if (!n.IsRead)
+                                                        {
+                                                            <span class="mt-1 w-2 h-2 rounded-full bg-fuchsia-500 shrink-0"></span>
+                                                        }
+                                                    </div>
+                                                    <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">@n.Message</p>
+                                                    @if (!string.IsNullOrEmpty(n.StatusLabel))
+                                                    {
+                                                        <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-semibold @(n.StatusLabel == "Đã xử lý" ? "bg-green-100 text-green-700" : n.StatusLabel == "Bác bỏ" ? "bg-slate-100 text-slate-600" : "bg-yellow-100 text-yellow-700")">
+                                                            @n.StatusLabel
+                                                            @if (!string.IsNullOrEmpty(n.ActionLabel))
+                                                            {
+                                                                <span class="font-normal"> · @n.ActionLabel</span>
+                                                            }
+                                                        </span>
+                                                    }
+                                                    <p class="text-[10px] text-slate-400 mt-1">@FormatTime(n.CreatedAt)</p>
+                                                </div>
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
                     <div class="relative" @onclick="ToggleUserMenu">
                         @if (!string.IsNullOrEmpty(currentUser.UserProfile?.AvatarUrl))
                         {
@@ -112,7 +185,10 @@
     private bool isAuthenticated = false;
     private Models.User? currentUser = null;
     private bool showUserMenu = false;
+    private bool showNotifMenu = false;
     private bool isInitialized = false;
+    private int unreadCount = 0;
+    private List<NotificationItem>? notifications;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -129,6 +205,8 @@
         {
             currentUser = await AuthService.GetCurrentUserAsync();
             isAuthenticated = currentUser != null;
+            if (currentUser != null)
+                await RefreshNotificationsAsync();
             StateHasChanged();
         }
         catch (Exception)
@@ -137,15 +215,63 @@
         }
     }
 
+    private async Task RefreshNotificationsAsync()
+    {
+        if (currentUser == null) return;
+        unreadCount = await NotificationService.GetUnreadCountAsync(currentUser.UserId);
+        if (showNotifMenu)
+            notifications = (await NotificationService.GetForUserAsync(currentUser.UserId)).ToList();
+    }
+
+    private async Task ToggleNotifMenu()
+    {
+        showNotifMenu = !showNotifMenu;
+        showUserMenu = false;
+        if (showNotifMenu && currentUser != null)
+        {
+            notifications = null;
+            StateHasChanged();
+            notifications = (await NotificationService.GetForUserAsync(currentUser.UserId)).ToList();
+            unreadCount = notifications.Count(n => !n.IsRead);
+        }
+    }
+
+    private async Task OnNotifClickAsync(NotificationItem item)
+    {
+        if (currentUser == null) return;
+        if (!item.IsRead)
+        {
+            await NotificationService.MarkAsReadAsync(item.NotifId, currentUser.UserId);
+            item.IsRead = true;
+            unreadCount = Math.Max(0, unreadCount - 1);
+        }
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        if (currentUser == null) return;
+        await NotificationService.MarkAllAsReadAsync(currentUser.UserId);
+        unreadCount = 0;
+        if (notifications != null)
+        {
+            foreach (var n in notifications)
+                n.IsRead = true;
+        }
+    }
+
     private void ToggleUserMenu()
     {
         showUserMenu = !showUserMenu;
+        showNotifMenu = false;
     }
 
     private async Task HandleLogout()
     {
         await AuthService.LogoutAsync();
         showUserMenu = false;
+        showNotifMenu = false;
+        notifications = null;
+        unreadCount = 0;
         Navigation.NavigateTo("/", true);
     }
 
@@ -159,5 +285,18 @@
         if (string.IsNullOrEmpty(username))
             return "?";
         return username.Substring(0, 1).ToUpper();
+    }
+
+    private static string FormatTime(DateTime createdAt)
+    {
+        var local = createdAt.Kind == DateTimeKind.Utc
+            ? createdAt.ToLocalTime()
+            : createdAt;
+        var span = DateTime.Now - local;
+        if (span.TotalMinutes < 1) return "Vừa xong";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} phút trước";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours} giờ trước";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays} ngày trước";
+        return local.ToString("dd/MM/yyyy HH:mm");
     }
 }

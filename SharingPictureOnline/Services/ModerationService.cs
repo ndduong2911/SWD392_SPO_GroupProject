@@ -180,7 +180,7 @@ public class ModerationService : IModerationService
         {
             NotifId = Guid.NewGuid(),
             UserId = reporterId,
-            Type = "SYSTEM",
+            Type = "REPORT",
             RefId = reportId,
             IsRead = false,
             CreatedAt = DateTime.UtcNow
