@@ -4,12 +4,24 @@
 @inject IPhotoService PhotoService
 @inject ISocialService SocialService
 @inject IAuthService AuthService
+@inject IReportService ReportService
 @inject NavigationManager Navigation
 @inject NotificationStateService NotificationState
 @inject IServiceProvider ServiceProvider
 @implements IDisposable
 
 <PageTitle>Chi Tiết Ảnh | FakePinterest</PageTitle>
+
+@if (!string.IsNullOrWhiteSpace(pageReportMessage))
+{
+    <div class="mb-4 rounded-lg px-4 py-3
+        @(pageReportIsError
+             ? "bg-red-50 text-red-700"
+             : "bg-green-50 text-green-700")">
+
+        @pageReportMessage
+    </div>
+}
 
 @if (photo == null)
 {
@@ -52,6 +64,16 @@ else
                                 <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart text-3xl group-hover:scale-110 transition-transform"></i>
                                 <span class="font-bold text-xl">@photo.LikeCount</span>
                             </button>
+                            
+                            @if (currentUser != null && photo != null && currentUser.UserId != photo.UserId)
+                            {
+                                <button type="button"
+                                        @onclick="OpenReportModal"
+                                        class="flex items-center gap-2 rounded-lg px-4 py-2 text-red-600 hover:bg-red-50 transition-colors">
+                                    <i class="fa-solid fa-flag"></i>
+                                    Báo cáo
+                                </button>
+                            }
                         </div>
                     </div>
                     <h1 class="text-2xl font-bold text-slate-900 mb-2">@photo.Title</h1>
@@ -59,6 +81,7 @@ else
                     {
                         <p class="text-slate-600 whitespace-pre-wrap">@photo.Description</p>
                     }
+
                 </div>
 
                 <!-- Comments List -->
@@ -184,10 +207,102 @@ else
                         </div>
                     }
                 </div>
+
             </div>
         </div>
+
     </div>
 }
+
+
+@if (showReportModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center
+        justify-center bg-black/50 px-4">
+
+        <div class="w-full max-w-lg rounded-2xl
+            bg-white p-6 shadow-xl">
+
+            <div class="mb-5 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-slate-800">
+                    Báo cáo ảnh
+                </h3>
+
+                <button type="button"
+                        @onclick="CloseReportModal"
+                        disabled="@isSubmittingReport">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <label class="mb-2 block font-medium text-slate-700">
+                Loại vi phạm
+            </label>
+
+            <select @bind="selectedViolationType"
+                    class="mb-4 w-full rounded-lg
+                border border-slate-300 px-3 py-2">
+
+                <option value="">-- Chọn loại vi phạm --</option>
+                <option value="SPAM">Spam hoặc giả mạo</option>
+                <option value="HARASSMENT">Quấy rối hoặc xúc phạm</option>
+                <option value="VIOLENCE">Bạo lực hoặc nguy hiểm</option>
+                <option value="NUDITY">Nội dung nhạy cảm</option>
+                <option value="COPYRIGHT">Vi phạm bản quyền</option>
+                <option value="OTHER">Khác</option>
+            </select>
+
+            <label class="mb-2 block font-medium text-slate-700">
+                Lý do
+            </label>
+
+            <textarea @bind="reportReason"
+                      @bind:event="oninput"
+                      maxlength="500"
+                      rows="4"
+                      class="w-full rounded-lg border
+            border-slate-300 px-3 py-2">
+        </textarea>
+
+        <div class="mt-1 text-right text-sm text-slate-500">
+            @reportReason.Length/500
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(reportFormMessage))
+        {
+            <div class="mt-3 rounded-lg bg-red-50
+                px-4 py-3 text-red-700">
+
+                @reportFormMessage
+            </div>
+        }
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button"
+                    @onclick="CloseReportModal"
+                    disabled="@isSubmittingReport"
+                    class="rounded-lg border px-4 py-2">
+                Hủy
+            </button>
+
+            <button type="button"
+                    @onclick="SubmitPhotoReportAsync"
+                    disabled="@isSubmittingReport"
+                    class="rounded-lg bg-red-600
+                px-4 py-2 text-white
+                disabled:opacity-50">
+
+                @(isSubmittingReport
+                    ? "Đang gửi..."
+                    : "Gửi báo cáo")
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+
+
 
 @code {
     [Parameter]
@@ -200,6 +315,16 @@ else
     private string newCommentText = "";
     private Guid? replyingToCommentId;
     private string replyingToUsername = "";
+
+    //Report
+    private bool showReportModal;
+    private bool isSubmittingReport;
+    private bool pageReportIsError;
+
+    private string selectedViolationType = string.Empty;
+    private string reportReason = string.Empty;
+    private string reportFormMessage = string.Empty;
+    private string pageReportMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -306,4 +431,119 @@ else
         newCommentText = "";
         CancelReply();
     }
+
+    private void OpenReportForm()
+    {
+        if (currentUser is null)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        if (photo is null)
+        {
+            return;
+        }
+
+        if (currentUser.UserId == photo.UserId)
+        {
+            return;
+        }
+
+        OpenReportModal();
+    }
+
+
+    //Report
+    private void OpenReportModal()
+    {
+        selectedViolationType = string.Empty;
+        reportReason = string.Empty;
+        reportFormMessage = string.Empty;
+
+        showReportModal = true;
+    }
+
+    private void CloseReportModal()
+    {
+        if (isSubmittingReport)
+        {
+            return;
+        }
+
+        showReportModal = false;
+        selectedViolationType = string.Empty;
+        reportReason = string.Empty;
+        reportFormMessage = string.Empty;
+    }
+
+    private async Task SubmitPhotoReportAsync()
+    {
+        if (currentUser == null)
+        {
+            reportFormMessage =
+                "Bạn cần đăng nhập để gửi báo cáo.";
+
+            return;
+        }
+
+        if (photo == null)
+        {
+            showReportModal = false;
+            pageReportIsError = true;
+            pageReportMessage =
+                "Nội dung này không còn khả dụng.";
+
+            return;
+        }
+
+        try
+        {
+            isSubmittingReport = true;
+            reportFormMessage = string.Empty;
+
+            var result = await ReportService.SubmitReportAsync(
+                currentUser.UserId,
+                photo.PhotoId,
+                "PHOTO",
+                selectedViolationType,
+                reportReason);
+
+            if (result.Success)
+            {
+                showReportModal = false;
+                pageReportIsError = false;
+                pageReportMessage = result.Message;
+
+                selectedViolationType = string.Empty;
+                reportReason = string.Empty;
+
+                return;
+            }
+
+            // A3 trong UC: target đã bị xóa hoặc không khả dụng
+            if (result.Code == "TARGET_UNAVAILABLE")
+            {
+                showReportModal = false;
+                pageReportIsError = true;
+                pageReportMessage = result.Message;
+
+                return;
+            }
+
+            // A1, A2, A4: giữ form và hiển thị lỗi
+            reportFormMessage = result.Message;
+        }
+        catch (Exception)
+        {
+            reportFormMessage =
+                "Có lỗi xảy ra khi gửi báo cáo. Vui lòng thử lại.";
+        }
+        finally
+        {
+            isSubmittingReport = false;
+        }
+    }
 }
+
+
