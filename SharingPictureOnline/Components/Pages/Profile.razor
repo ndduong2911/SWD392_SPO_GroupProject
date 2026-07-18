@@ -145,7 +145,7 @@ else
                     <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
                         @foreach (var photo in userPhotos)
                         {
-                            <div class="break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm bg-slate-200 hover:shadow-xl transition cursor-pointer" @onclick="() => GoToPhotoDetail(photo.PhotoId)">
+                            <a href="/photo/@photo.PhotoId" class="block break-inside-avoid relative group rounded-xl overflow-hidden shadow-sm bg-slate-200 hover:shadow-xl transition cursor-pointer">
                                 <img src="@photo.StorageKey" alt="@photo.Title" class="w-full object-cover">
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition p-4 flex flex-col justify-end">
                                     <p class="text-white font-semibold">@photo.Title</p>
@@ -154,7 +154,7 @@ else
                                         <span><i class="fa-solid fa-comment mr-1"></i>@photo.CommentCount</span>
                                     </div>
                                 </div>
-                            </div>
+                            </a>
                         }
                     </div>
                 }

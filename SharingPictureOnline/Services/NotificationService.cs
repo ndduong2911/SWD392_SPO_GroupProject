@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SharingPictureOnline.Models;
 using SharingPictureOnline.Repositories;
 
@@ -38,5 +38,34 @@ namespace SharingPictureOnline.Services
             await _notificationRepository.MarkAllAsReadAsync(userId);
         }
      
+        public async Task CreateLikeNotificationAsync(Guid targetUserId, Guid actorId)
+        {
+            var notification = new Notification
+            {
+                NotifId = Guid.NewGuid(),
+                UserId = targetUserId,
+                Type = "LIKE",
+                RefId = actorId,
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+            await _notificationRepository.AddAsync(notification);
+            _notificationState.NotifyUser(targetUserId);
+        }
+
+        public async Task CreateCommentNotificationAsync(Guid targetUserId, Guid actorId)
+        {
+            var notification = new Notification
+            {
+                NotifId = Guid.NewGuid(),
+                UserId = targetUserId,
+                Type = "COMMENT",
+                RefId = actorId,
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+            await _notificationRepository.AddAsync(notification);
+            _notificationState.NotifyUser(targetUserId);
+        }
     }
 }
