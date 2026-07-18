@@ -1,10 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace SharingPictureOnline.Models;
 
+public enum ReportTargetType
+{
+    Photo,
+    Profile
+}
+public enum ReportStatus
+{
+    Pending,
+    Accepted,
+    Rejected
+}
+
 public partial class Report
 {
-    public Guid ReportId { get; set; }
+    [Key]
+    public Guid ReportId { get; set; } = Guid.NewGuid();
 
     public Guid ReporterId { get; set; }
 
@@ -12,6 +27,8 @@ public partial class Report
 
     public Guid TargetId { get; set; }
 
+    [Required]
+    [MaxLength(500)]
     public string Reason { get; set; } = null!;
 
     public string Status { get; set; } = null!;

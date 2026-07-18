@@ -1,9 +1,11 @@
 @page "/photo/{Id:guid}"
 @using SharingPictureOnline.Models
 @using SharingPictureOnline.Services
+@using SharingPictureOnline.Models
 @inject IPhotoService PhotoService
 @inject ISocialService SocialService
 @inject IAuthService AuthService
+@inject IReportService ReportService
 @inject NavigationManager Navigation
 @inject NotificationStateService NotificationState
 @inject IServiceProvider ServiceProvider
@@ -11,7 +13,18 @@
 
 <PageTitle>Chi Tiết Ảnh | FakePinterest</PageTitle>
 
-@if (photo == null)
+@if (!string.IsNullOrWhiteSpace(pageReportMessage))
+{
+    <div class="mb-4 rounded-lg px-4 py-3
+        @(pageReportIsError
+             ? "bg-red-50 text-red-700"
+             : "bg-green-50 text-green-700")">
+
+        @pageReportMessage
+    </div>
+}
+
+@if (isLoading)
 {
     <div class="flex justify-center items-center h-96">
         <i class="fa-solid fa-spinner fa-spin text-4xl text-fuchsia-600"></i>
@@ -26,47 +39,63 @@ else
                 <img src="@photo.StorageKey" alt="@photo.Title" class="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-sm" />
             </div>
 
-            <!-- Right Side: Details & Comments -->
-            <div class="w-full md:w-1/2 flex flex-col max-h-[80vh]">
-                <!-- Header -->
-                <div class="p-6 border-b border-slate-100 shrink-0">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-3 cursor-pointer group" @onclick="GoToProfile">
-                            <div class="w-12 h-12 bg-fuchsia-100 text-fuchsia-600 rounded-full flex items-center justify-center font-bold text-xl uppercase overflow-hidden border-2 border-slate-200 group-hover:border-fuchsia-300 transition">
-                                @if (!string.IsNullOrEmpty(photo.User?.UserProfile?.AvatarUrl))
-                                {
-                                    <img src="@photo.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
-                                }
-                                else
-                                {
-                                    @(photo.User?.Username?.FirstOrDefault() ?? 'U')
-                                }
-                            </div>
-                            <div>
-                                <h2 class="font-bold text-slate-900 text-lg group-hover:text-fuchsia-600 transition">@(photo.User?.Username ?? "Anonymous")</h2>
-                                <p class="text-sm text-slate-500">@photo.UploadedAt.ToLocalTime().ToString("dd MMM yyyy")</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <button @onclick="ToggleLike" class="flex items-center gap-2 group transition-colors @(isLiked ? "text-red-500" : "text-slate-500 hover:text-red-500")">
-                                <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart text-3xl group-hover:scale-110 transition-transform"></i>
-                                <span class="font-bold text-xl">@photo.LikeCount</span>
+            <div class="lg:w-1/2 p-6 md:p-8 flex flex-col max-h-[85vh] overflow-y-auto custom-scrollbar">
+
+                <div class="flex items-center justify-between mb-6 pb-6 border-b border-slate-100">
+                    <div class="flex gap-3">
+                        <button class="flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition
+                            @(isLiked
+                                                ? "bg-fuchsia-100 text-fuchsia-700"
+                                                : "bg-slate-100 text-slate-700 hover:bg-slate-200")"
+                                @onclick="ToggleLike">
+
+                            <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart text-lg"></i>
+                            <span>@likeCount</span>
+                        </button>
+
+                        @if (currentUser != null &&
+     photo != null &&
+     currentUser.UserId != photo.UserId)
+                        {
+                            <button type="button"
+                                    @onclick="OpenReportModal"
+                                    class="flex items-center gap-2 rounded-lg
+                                px-4 py-2 text-red-600 hover:bg-red-50">
+
+                                <i class="fa-solid fa-flag"></i>
+                                Báo cáo
                             </button>
-                        </div>
+                        }
                     </div>
                     <h1 class="text-2xl font-bold text-slate-900 mb-2">@photo.Title</h1>
                     @if (!string.IsNullOrEmpty(photo.Description))
                     {
                         <p class="text-slate-600 whitespace-pre-wrap">@photo.Description</p>
                     }
+
                 </div>
 
-                <!-- Comments List -->
-                <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
-                    <h3 class="font-bold text-slate-900 flex items-center gap-2 mb-4 text-lg">
-                        <i class="fa-regular fa-comment-dots"></i> 
-                        Bình luận (@photo.CommentCount)
-                    </h3>
+
+
+                <div class="flex items-center justify-between bg-slate-50 p-4 rounded-2xl mb-8">
+                    <div class="flex items-center gap-3 cursor-pointer group" @onclick="GoToProfile">
+                        <div class="w-12 h-12 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center overflow-hidden shadow-sm group-hover:border-fuchsia-300 transition">
+                            @if (!string.IsNullOrEmpty(photo.User?.UserProfile?.AvatarUrl))
+                            {
+                                <img src="@photo.User.UserProfile.AvatarUrl" class="w-full h-full object-cover" />
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-user text-slate-400"></i>
+                            }
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-900 group-hover:text-fuchsia-600 transition">
+                                @(photo.User?.Username ?? "Anonymous")
+                            </p>
+                            <p class="text-xs text-slate-500">@photo.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy")</p>
+                        </div>
+                    </div>
 
                     @if (!comments.Any())
                     {
@@ -184,10 +213,121 @@ else
                         </div>
                     }
                 </div>
+
             </div>
         </div>
+
+       
     </div>
+    <button type="button"
+            @onclick="SubmitPhotoReportAsync"
+            disabled="@isSubmittingReport"
+            class="rounded-lg bg-red-600 px-4 py-2
+        text-white hover:bg-red-700
+        disabled:opacity-50">
+
+        @if (isSubmittingReport)
+        {
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+            <span>Đang gửi...</span>
+        }
+        else
+        {
+            <i class="fa-solid fa-flag mr-2"></i>
+            <span>Gửi báo cáo</span>
+        }
+    </button>
 }
+
+
+@if (showReportModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center
+        justify-center bg-black/50 px-4">
+
+        <div class="w-full max-w-lg rounded-2xl
+            bg-white p-6 shadow-xl">
+
+            <div class="mb-5 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-slate-800">
+                    Báo cáo ảnh
+                </h3>
+
+                <button type="button"
+                        @onclick="CloseReportModal"
+                        disabled="@isSubmittingReport">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <label class="mb-2 block font-medium text-slate-700">
+                Loại vi phạm
+            </label>
+
+            <select @bind="selectedViolationType"
+                    class="mb-4 w-full rounded-lg
+                border border-slate-300 px-3 py-2">
+
+                <option value="">-- Chọn loại vi phạm --</option>
+                <option value="SPAM">Spam hoặc giả mạo</option>
+                <option value="HARASSMENT">Quấy rối hoặc xúc phạm</option>
+                <option value="VIOLENCE">Bạo lực hoặc nguy hiểm</option>
+                <option value="NUDITY">Nội dung nhạy cảm</option>
+                <option value="COPYRIGHT">Vi phạm bản quyền</option>
+                <option value="OTHER">Khác</option>
+            </select>
+
+            <label class="mb-2 block font-medium text-slate-700">
+                Lý do
+            </label>
+
+            <textarea @bind="reportReason"
+                      @bind:event="oninput"
+                      maxlength="500"
+                      rows="4"
+                      class="w-full rounded-lg border
+            border-slate-300 px-3 py-2">
+        </textarea>
+
+        <div class="mt-1 text-right text-sm text-slate-500">
+            @reportReason.Length/500
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(reportFormMessage))
+        {
+            <div class="mt-3 rounded-lg bg-red-50
+                px-4 py-3 text-red-700">
+
+                @reportFormMessage
+            </div>
+        }
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button"
+                    @onclick="CloseReportModal"
+                    disabled="@isSubmittingReport"
+                    class="rounded-lg border px-4 py-2">
+                Hủy
+            </button>
+
+            <button type="button"
+                    @onclick="SubmitPhotoReportAsync"
+                    disabled="@isSubmittingReport"
+                    class="rounded-lg bg-red-600
+                px-4 py-2 text-white
+                disabled:opacity-50">
+
+                @(isSubmittingReport
+                    ? "Đang gửi..."
+                    : "Gửi báo cáo")
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+
+
 
 @code {
     [Parameter]
@@ -197,9 +337,18 @@ else
     private IEnumerable<Comment> comments = new List<Comment>();
     private User? currentUser;
     private bool isLiked = false;
-    private string newCommentText = "";
-    private Guid? replyingToCommentId;
-    private string replyingToUsername = "";
+    private int likeCount = 0;
+    private bool showReportForm;
+
+    //Report
+    private bool showReportModal;
+    private bool isSubmittingReport;
+    private bool pageReportIsError;
+
+    private string selectedViolationType = string.Empty;
+    private string reportReason = string.Empty;
+    private string reportFormMessage = string.Empty;
+    private string pageReportMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -306,4 +455,119 @@ else
         newCommentText = "";
         CancelReply();
     }
+
+    private void OpenReportForm()
+    {
+        if (currentUser is null)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        if (photo is null)
+        {
+            return;
+        }
+
+        if (currentUser.UserId == photo.UserId)
+        {
+            return;
+        }
+
+        showReportForm = true;
+    }
+
+
+    //Report
+    private void OpenReportModal()
+    {
+        selectedViolationType = string.Empty;
+        reportReason = string.Empty;
+        reportFormMessage = string.Empty;
+
+        showReportModal = true;
+    }
+
+    private void CloseReportModal()
+    {
+        if (isSubmittingReport)
+        {
+            return;
+        }
+
+        showReportModal = false;
+        selectedViolationType = string.Empty;
+        reportReason = string.Empty;
+        reportFormMessage = string.Empty;
+    }
+
+    private async Task SubmitPhotoReportAsync()
+    {
+        if (currentUser == null)
+        {
+            reportFormMessage =
+                "Bạn cần đăng nhập để gửi báo cáo.";
+
+            return;
+        }
+
+        if (photo == null)
+        {
+            showReportModal = false;
+            pageReportIsError = true;
+            pageReportMessage =
+                "Nội dung này không còn khả dụng.";
+
+            return;
+        }
+
+        try
+        {
+            isSubmittingReport = true;
+            reportFormMessage = string.Empty;
+
+            var result = await ReportService.SubmitReportAsync(
+                currentUser.UserId,
+                photo.PhotoId,
+                "PHOTO",
+                selectedViolationType,
+                reportReason);
+
+            if (result.Success)
+            {
+                showReportModal = false;
+                pageReportIsError = false;
+                pageReportMessage = result.Message;
+
+                selectedViolationType = string.Empty;
+                reportReason = string.Empty;
+
+                return;
+            }
+
+            // A3 trong UC: target đã bị xóa hoặc không khả dụng
+            if (result.Code == "TARGET_UNAVAILABLE")
+            {
+                showReportModal = false;
+                pageReportIsError = true;
+                pageReportMessage = result.Message;
+
+                return;
+            }
+
+            // A1, A2, A4: giữ form và hiển thị lỗi
+            reportFormMessage = result.Message;
+        }
+        catch (Exception)
+        {
+            reportFormMessage =
+                "Có lỗi xảy ra khi gửi báo cáo. Vui lòng thử lại.";
+        }
+        finally
+        {
+            isSubmittingReport = false;
+        }
+    }
 }
+
+
