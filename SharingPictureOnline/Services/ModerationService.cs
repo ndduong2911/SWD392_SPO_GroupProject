@@ -83,7 +83,8 @@ public class ModerationService : IModerationService
             ActorId   = actorId,
             Action    = action,
             Note      = $"Report {newStatus} — action: {action}",
-            CreatedAt = DateTime.UtcNow
+            // Local time: SQL datetime has no Kind; FormatTime treats Unspecified as local.
+            CreatedAt = DateTime.Now
         };
         _context.AuditLogs.Add(auditLog);
         await _context.SaveChangesAsync();
@@ -166,7 +167,7 @@ public class ModerationService : IModerationService
             Type = "SYSTEM",
             RefId = reportId,
             IsRead = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
         _context.Notifications.Add(notification);
         await _context.SaveChangesAsync();
@@ -183,7 +184,7 @@ public class ModerationService : IModerationService
             Type = "REPORT",
             RefId = reportId,
             IsRead = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
         _context.Notifications.Add(notification);
         await _context.SaveChangesAsync();
@@ -198,7 +199,7 @@ public class ModerationService : IModerationService
             Type = "SYSTEM",
             RefId = reportId,
             IsRead = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
         _context.Notifications.Add(notification);
         await _context.SaveChangesAsync();

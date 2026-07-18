@@ -20,4 +20,6 @@ public class NotificationItem
     public string Icon { get; set; } = "fa-solid fa-bell";
     public string? StatusLabel { get; set; }
     public string? ActionLabel { get; set; }
+    /// <summary>Optional deep-link when the user clicks the notification.</summary>
+    public string? NavigateUrl { get; set; }
 }

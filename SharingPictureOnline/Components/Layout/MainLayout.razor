@@ -245,6 +245,10 @@
             item.IsRead = true;
             unreadCount = Math.Max(0, unreadCount - 1);
         }
+
+        showNotifMenu = false;
+        if (!string.IsNullOrWhiteSpace(item.NavigateUrl))
+            Navigation.NavigateTo(item.NavigateUrl);
     }
 
     private async Task MarkAllReadAsync()

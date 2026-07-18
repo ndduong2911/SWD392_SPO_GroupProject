@@ -51,8 +51,10 @@ public class NotificationService : INotificationService
                 .Where(r => reportIds.Contains(r.ReportId))
                 .ToDictionaryAsync(r => r.ReportId);
 
+        var targetSubjects = await ResolveTargetSubjectsAsync(reports.Values);
+
         return notifications
-            .Select(n => MapToItem(n, reports))
+            .Select(n => MapToItem(n, reports, targetSubjects))
             .ToList();
     }
 
@@ -84,7 +86,95 @@ public class NotificationService : INotificationService
         await _context.SaveChangesAsync();
     }
 
-    private static NotificationItem MapToItem(Notification n, IReadOnlyDictionary<Guid, Report> reports)
+    private async Task<Dictionary<Guid, TargetSubject>> ResolveTargetSubjectsAsync(IEnumerable<Report> reports)
+    {
+        var list = reports.ToList();
+        if (list.Count == 0)
+            return new Dictionary<Guid, TargetSubject>();
+
+        var photoIds = list.Where(r => r.TargetType == "PHOTO").Select(r => r.TargetId).Distinct().ToList();
+        var commentIds = list.Where(r => r.TargetType == "COMMENT").Select(r => r.TargetId).Distinct().ToList();
+        var userIds = list.Where(r => r.TargetType == "USER").Select(r => r.TargetId).Distinct().ToList();
+
+        var photoTitles = photoIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _context.Photos.AsNoTracking()
+                .Where(p => photoIds.Contains(p.PhotoId))
+                .ToDictionaryAsync(p => p.PhotoId, p => p.Title);
+
+        var comments = commentIds.Count == 0
+            ? new Dictionary<Guid, (string Content, Guid PhotoId)>()
+            : await _context.Comments.AsNoTracking()
+                .Where(c => commentIds.Contains(c.CommentId))
+                .ToDictionaryAsync(c => c.CommentId, c => (c.Content, c.PhotoId));
+
+        var commentPhotoIds = comments.Values.Select(c => c.PhotoId).Distinct()
+            .Where(id => !photoTitles.ContainsKey(id))
+            .ToList();
+        if (commentPhotoIds.Count > 0)
+        {
+            var extraTitles = await _context.Photos.AsNoTracking()
+                .Where(p => commentPhotoIds.Contains(p.PhotoId))
+                .ToDictionaryAsync(p => p.PhotoId, p => p.Title);
+            foreach (var kv in extraTitles)
+                photoTitles[kv.Key] = kv.Value;
+        }
+
+        var usernames = userIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _context.Users.AsNoTracking()
+                .Where(u => userIds.Contains(u.UserId))
+                .ToDictionaryAsync(u => u.UserId, u => u.Username);
+
+        var result = new Dictionary<Guid, TargetSubject>();
+        foreach (var report in list)
+        {
+            result[report.ReportId] = report.TargetType switch
+            {
+                "PHOTO" => new TargetSubject(
+                    "Ảnh",
+                    photoTitles.TryGetValue(report.TargetId, out var title) && !string.IsNullOrWhiteSpace(title)
+                        ? title.Trim()
+                        : "ảnh đã báo cáo",
+                    null),
+                "COMMENT" => BuildCommentSubject(report.TargetId, comments, photoTitles),
+                "USER" => BuildUserSubject(report.TargetId, usernames),
+                _ => new TargetSubject(report.TargetType, "nội dung đã báo cáo", null)
+            };
+        }
+
+        return result;
+    }
+
+    private static TargetSubject BuildCommentSubject(
+        Guid commentId,
+        IReadOnlyDictionary<Guid, (string Content, Guid PhotoId)> comments,
+        IReadOnlyDictionary<Guid, string> photoTitles)
+    {
+        if (!comments.TryGetValue(commentId, out var c))
+            return new TargetSubject("Bình luận", "bình luận đã báo cáo", null);
+
+        var snippet = Truncate(c.Content, 48);
+        var photoTitle = photoTitles.TryGetValue(c.PhotoId, out var t) && !string.IsNullOrWhiteSpace(t)
+            ? t.Trim()
+            : null;
+        var label = photoTitle != null
+            ? $"{snippet} (trên ảnh «{Truncate(photoTitle, 32)}»)"
+            : snippet;
+        return new TargetSubject("Bình luận", label, null);
+    }
+
+    private static TargetSubject BuildUserSubject(Guid userId, IReadOnlyDictionary<Guid, string> usernames)
+    {
+        if (usernames.TryGetValue(userId, out var name) && !string.IsNullOrWhiteSpace(name))
+            return new TargetSubject("Tài khoản", name, $"/profile/{Uri.EscapeDataString(name)}");
+        return new TargetSubject("Tài khoản", "tài khoản đã báo cáo", null);
+    }
+
+    private static NotificationItem MapToItem(
+        Notification n,
+        IReadOnlyDictionary<Guid, Report> reports,
+        IReadOnlyDictionary<Guid, TargetSubject> targetSubjects)
     {
         var item = new NotificationItem
         {
@@ -104,9 +194,16 @@ public class NotificationService : INotificationService
             var action = audit?.Action;
             var actionLabel = action != null && ActionLabels.TryGetValue(action, out var al) ? al : action;
             var statusLabel = StatusLabels.TryGetValue(report.Status, out var sl) ? sl : report.Status;
+            var subject = targetSubjects.TryGetValue(report.ReportId, out var ts)
+                ? ts
+                : new TargetSubject(GetTargetTypeLabel(report.TargetType), "nội dung đã báo cáo", null);
+            var reasonSnippet = Truncate(report.Reason, 56);
+            var reportDate = FormatReportDate(report.CreatedAt);
+            var subjectPhrase = $"«{subject.Label}»";
 
             item.StatusLabel = statusLabel;
             item.ActionLabel = actionLabel;
+            item.NavigateUrl = subject.NavigateUrl;
 
             // Reporter outcome notification (Type REPORT, or SYSTEM where recipient is the reporter)
             if (n.Type == "REPORT" || (n.Type == "SYSTEM" && report.ReporterId == n.UserId))
@@ -114,15 +211,21 @@ public class NotificationService : INotificationService
                 item.Icon = report.Status == "REJECTED"
                     ? "fa-solid fa-ban"
                     : "fa-solid fa-flag-checkered";
-                item.Title = "Kết quả báo cáo";
+                item.Title = $"Kết quả báo cáo · {subject.TypeLabel}";
 
                 if (report.Status == "REJECTED" || action == "DISMISS")
                 {
-                    item.Message = $"Báo cáo của bạn đã bị bác bỏ. Kết quả: {actionLabel ?? statusLabel}.";
+                    item.Message =
+                        $"Báo cáo {subject.TypeLabel.ToLowerInvariant()} {subjectPhrase} " +
+                        $"(gửi {reportDate}, lý do: {reasonSnippet}) đã bị bác bỏ. " +
+                        $"Kết quả: {actionLabel ?? statusLabel}.";
                 }
                 else
                 {
-                    item.Message = $"Báo cáo của bạn đã được xử lý ({statusLabel}). Hành động: {actionLabel ?? "Đã xử lý"}.";
+                    item.Message =
+                        $"Báo cáo {subject.TypeLabel.ToLowerInvariant()} {subjectPhrase} " +
+                        $"(gửi {reportDate}, lý do: {reasonSnippet}) đã được xử lý. " +
+                        $"Hành động: {actionLabel ?? "Đã xử lý"}.";
                 }
 
                 return item;
@@ -134,8 +237,8 @@ public class NotificationService : INotificationService
                 item.Icon = "fa-solid fa-triangle-exclamation";
                 item.Title = "Cảnh báo hệ thống";
                 item.Message = action == "WARN_USER"
-                    ? "Bạn đã nhận cảnh cáo do nội dung bị báo cáo vi phạm."
-                    : $"Nội dung của bạn đã bị xử lý bởi quản trị viên. Hành động: {actionLabel ?? statusLabel}.";
+                    ? $"Bạn đã nhận cảnh cáo do {subject.TypeLabel.ToLowerInvariant()} {subjectPhrase} bị báo cáo vi phạm."
+                    : $"{subject.TypeLabel} {subjectPhrase} của bạn đã bị xử lý bởi quản trị viên. Hành động: {actionLabel ?? statusLabel}.";
                 return item;
             }
         }
@@ -167,4 +270,32 @@ public class NotificationService : INotificationService
 
         return item;
     }
+
+    private static string GetTargetTypeLabel(string targetType) => targetType switch
+    {
+        "PHOTO" => "Ảnh",
+        "COMMENT" => "Bình luận",
+        "USER" => "Tài khoản",
+        _ => targetType
+    };
+
+    private static string FormatReportDate(DateTime createdAt)
+    {
+        var local = createdAt.Kind == DateTimeKind.Utc ? createdAt.ToLocalTime() : createdAt;
+        return local.ToString("dd/MM/yyyy");
+    }
+
+    private static string Truncate(string? text, int maxLen)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return "(không có)";
+        var trimmed = text.Trim().Replace('\r', ' ').Replace('\n', ' ');
+        while (trimmed.Contains("  ", StringComparison.Ordinal))
+            trimmed = trimmed.Replace("  ", " ", StringComparison.Ordinal);
+        if (trimmed.Length <= maxLen)
+            return trimmed;
+        return trimmed[..(maxLen - 1)].TrimEnd() + "…";
+    }
+
+    private sealed record TargetSubject(string TypeLabel, string Label, string? NavigateUrl);
 }
