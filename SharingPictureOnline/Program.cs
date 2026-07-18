@@ -33,6 +33,7 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IFollowService, FollowService>();
 builder.Services.AddSingleton<NotificationStateService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 var app = builder.Build();
 
 

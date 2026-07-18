@@ -19,7 +19,7 @@ public class ReportRepository : IReportRepository
 
     public async Task<Report> AddAsync(Report report)
     {
-        _context.Reports.Add(report);
+        await _context.Reports.AddAsync(report);
         await _context.SaveChangesAsync();
         return report;
     }
@@ -31,4 +31,104 @@ public class ReportRepository : IReportRepository
         _context.Reports.Remove(report);
         return await _context.SaveChangesAsync() > 0;
     }
+
+    public async Task<bool> TargetExistsAsync(
+        ReportTargetType targetType,
+        Guid targetId)
+    {
+        return targetType switch
+        {
+            ReportTargetType.Photo =>
+                await _context.Photos
+                    .AnyAsync(p => p.PhotoId == targetId),
+
+            // Đang giả định TargetId của Profile là UserId
+            ReportTargetType.Profile =>
+                await _context.Users
+                    .AnyAsync(u => u.UserId == targetId),
+
+            _ => false
+        };
+    }
+
+    public async Task<bool> IsOwnerAsync(
+        Guid reporterId,
+        ReportTargetType targetType,
+        Guid targetId)
+    {
+        return targetType switch
+        {
+            ReportTargetType.Photo =>
+                await _context.Photos.AnyAsync(p =>
+                    p.PhotoId == targetId &&
+                    p.UserId == reporterId),
+
+            // Nếu target Profile là UserId
+            ReportTargetType.Profile =>
+                targetId == reporterId,
+
+            _ => false
+        };
+    }
+
+    public Task<bool> ExistsAsync(
+        Guid reporterId,
+        ReportTargetType targetType,
+        Guid targetId)
+    {
+        return _context.Reports.AnyAsync(r =>
+            r.ReporterId == reporterId &&
+            r.TargetType == targetType.ToString() &&
+            r.TargetId == targetId);
+    }
+
+    public async Task<bool> HasReportedAsync(
+        Guid reporterId,
+        Guid targetId,
+        string targetType)
+    {
+        return await _context.Reports
+            .AsNoTracking()
+            .AnyAsync(r =>
+                r.ReporterId == reporterId &&
+                r.TargetId == targetId &&
+                r.TargetType == targetType);
+    }
+
+    public async Task<Guid?> GetTargetOwnerIdAsync(
+        Guid targetId,
+        string targetType)
+    {
+        if (targetType == "PHOTO")
+        {
+            return await _context.Photos
+                .AsNoTracking()
+                .Where(p => p.PhotoId == targetId)
+                .Select(p => (Guid?)p.UserId)
+                .FirstOrDefaultAsync();
+        }
+
+        if (targetType == "PROFILE")
+        {
+            return await _context.UserProfiles
+                .AsNoTracking()
+                .Where(p => p.ProfileId == targetId)
+                .Select(p => (Guid?)p.UserId)
+                .FirstOrDefaultAsync();
+        }
+
+        return null;
+    }
+
+    public async Task<IReadOnlyList<Report>> GetPendingReportsAsync()
+    {
+        return await _context.Reports
+            .AsNoTracking()
+            .Include(r => r.Reporter)
+            .Where(r => r.Status == "PENDING")
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+    }
+
+
 }
