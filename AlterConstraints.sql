@@ -1,0 +1,24 @@
+-- Mở rộng các CHECK constraint để hỗ trợ moderation actions
+USE SWD392;
+GO
+
+-- 1. USER.role: thêm BANNED
+ALTER TABLE [USER] DROP CONSTRAINT CHK_User_Role;
+ALTER TABLE [USER] ADD CONSTRAINT CHK_User_Role 
+    CHECK ([role] IN ('ADMIN', 'USER', 'MODERATOR', 'BANNED'));
+GO
+
+-- 2. PHOTO.visibility: thêm HIDDEN
+ALTER TABLE [PHOTO] DROP CONSTRAINT CHK_Photo_Visibility;
+ALTER TABLE [PHOTO] ADD CONSTRAINT CHK_Photo_Visibility 
+    CHECK ([visibility] IN ('PUBLIC', 'PRIVATE', 'FRIENDS_ONLY', 'HIDDEN'));
+GO
+
+-- 3. NOTIFICATION.type: thêm SYSTEM (đã có), REPORT
+ALTER TABLE [NOTIFICATION] DROP CONSTRAINT CHK_Notif_Type;
+ALTER TABLE [NOTIFICATION] ADD CONSTRAINT CHK_Notif_Type 
+    CHECK ([type] IN ('LIKE', 'COMMENT', 'FOLLOW', 'SYSTEM', 'REPORT'));
+GO
+
+SELECT 'Constraints updated OK' AS Result;
+GO
