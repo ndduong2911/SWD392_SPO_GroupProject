@@ -45,58 +45,72 @@ public class ModerationService : IModerationService
 
         string newStatus = action == "DISMISS" ? "REJECTED" : "RESOLVED";
 
-        // Enforce the chosen action on the target
-        if (action != "DISMISS")
+        // Use a transaction so enforcement, status update and audit log are atomic.
+        // Note: ReportRepository.UpdateStatusAsync calls SaveChangesAsync,
+        // but the ambient transaction will still ensure atomicity.
+        using var tx = await _context.Database.BeginTransactionAsync();
+
+        try
         {
-            switch (action)
+            // Enforce the chosen action on the target
+            if (action != "DISMISS")
             {
-                case "WARN_USER":
-                    var offenderId = await GetOffenderIdAsync(report.TargetType, report.TargetId);
-                    if (offenderId.HasValue)
-                        await WarnUserAsync(offenderId.Value, reportId);
-                    break;
+                switch (action)
+                {
+                    case "WARN_USER":
+                        var offenderId = await GetOffenderIdAsync(report.TargetType, report.TargetId);
+                        if (offenderId.HasValue)
+                            await WarnUserAsync(offenderId.Value, reportId);
+                        break;
 
-                case "HIDE_CONTENT":
-                    await HideContentAsync(report.TargetType, report.TargetId);
-                    break;
+                    case "HIDE_CONTENT":
+                        await HideContentAsync(report.TargetType, report.TargetId);
+                        break;
 
-                case "REMOVE_CONTENT":
-                    await RemoveContentAsync(report.TargetType, report.TargetId);
-                    break;
+                    case "REMOVE_CONTENT":
+                        await RemoveContentAsync(report.TargetType, report.TargetId);
+                        break;
 
-                case "SUSPEND_ACCOUNT":
-                    var suspendId = await GetOffenderIdAsync(report.TargetType, report.TargetId);
-                    if (suspendId.HasValue)
-                        await SuspendAccountAsync(suspendId.Value);
-                    break;
+                    case "SUSPEND_ACCOUNT":
+                        var suspendId = await GetOffenderIdAsync(report.TargetType, report.TargetId);
+                        if (suspendId.HasValue)
+                            await SuspendAccountAsync(suspendId.Value);
+                        break;
+                }
             }
+
+            // Update report status
+            await _reportRepository.UpdateStatusAsync(reportId, newStatus);
+
+            // BR-06: Write audit log with actor ID and timestamp
+            var auditLog = new AuditLog
+            {
+                LogId = Guid.NewGuid(),
+                ReportId = reportId,
+                ActorId = actorId,
+                Action = action,
+                Note = $"Report {newStatus} — action: {action}",
+                CreatedAt = DateTime.Now
+            };
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+
+            await NotifyReporterAsync(report.ReporterId, reportId, action);
+
+            // Notify offender if action was taken
+            if (action != "DISMISS")
+            {
+                var offId = await GetOffenderIdAsync(report.TargetType, report.TargetId);
+                if (offId.HasValue && offId.Value != report.ReporterId)
+                    await NotifyOffenderAsync(offId.Value, reportId, action);
+            }
+
+            await tx.CommitAsync();
         }
-
-        // Update report status
-        await _reportRepository.UpdateStatusAsync(reportId, newStatus);
-
-        // BR-06: Ghi audit log với actor ID và timestamp
-        var auditLog = new AuditLog
+        catch
         {
-            LogId     = Guid.NewGuid(),
-            ReportId  = reportId,
-            ActorId   = actorId,
-            Action    = action,
-            Note      = $"Report {newStatus} — action: {action}",
-            // Local time: SQL datetime has no Kind; FormatTime treats Unspecified as local.
-            CreatedAt = DateTime.Now
-        };
-        _context.AuditLogs.Add(auditLog);
-        await _context.SaveChangesAsync();
-
-        await NotifyReporterAsync(report.ReporterId, reportId, action);
-
-        // Notify offender if action was taken
-        if (action != "DISMISS")
-        {
-            var offId = await GetOffenderIdAsync(report.TargetType, report.TargetId);
-            if (offId.HasValue && offId.Value != report.ReporterId)
-                await NotifyOffenderAsync(offId.Value, reportId, action);
+            await tx.RollbackAsync();
+            throw;
         }
 
         return true;
@@ -130,10 +144,25 @@ public class ModerationService : IModerationService
     {
         if (targetType == "PHOTO")
         {
-            var photo = await _context.Photos.FindAsync(targetId);
+            // Physically remove the photo DB record and any related comments.
+            var photo = await _context.Photos
+                .Include(p => p.User)
+                .FirstOrDefaultAsync(p => p.PhotoId == targetId);
+
             if (photo != null)
             {
-                photo.Visibility = "HIDDEN";
+                // Remove comments associated with this photo to avoid FK conflicts
+                var comments = await _context.Comments
+                    .Where(c => c.PhotoId == targetId)
+                    .ToListAsync();
+                if (comments.Count > 0)
+                    _context.Comments.RemoveRange(comments);
+
+                _context.Photos.Remove(photo);
+
+                // If you store files externally (Cloudinary/Azure/S3), delete storage object here.
+                // This project has Cloudinary config in appsettings — integrate deletion if needed.
+
                 await _context.SaveChangesAsync();
             }
         }
