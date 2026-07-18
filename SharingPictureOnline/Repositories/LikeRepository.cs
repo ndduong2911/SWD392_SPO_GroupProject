@@ -26,4 +26,8 @@ public class LikeRepository : ILikeRepository
         _context.Likes.Remove(like);
         return await _context.SaveChangesAsync() > 0;
     }
+    public async Task<bool> HasLikedAsync(Guid userId, Guid photoId)
+    {
+        return await _context.Likes.AnyAsync(l => l.UserId == userId && l.PhotoId == photoId);
+    }
 }

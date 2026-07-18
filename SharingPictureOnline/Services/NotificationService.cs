@@ -23,9 +23,57 @@ public class NotificationService : INotificationService
         ["PENDING"]  = "Chờ xử lý",
     };
 
-    public NotificationService(SpoContext context)
-    {
-        _context = context;
+        public async Task CreateFollowNotificationAsync(Guid followerId, Guid followedUserId)
+        {
+            var notification = new Notification
+            {
+                NotifId = Guid.NewGuid(),
+                UserId = followedUserId,
+                Type = "FOLLOW",
+                RefId = followerId,
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+
+            await _notificationRepository.AddAsync(notification);
+
+            // ĐÂY RỒI: Kích hoạt tín hiệu Real-time gửi đích danh đến người bị theo dõi!
+            _notificationState.NotifyUser(followedUserId);
+        }
+        public async Task MarkAllAsReadAsync(Guid userId)
+        {
+            await _notificationRepository.MarkAllAsReadAsync(userId);
+        }
+     
+        public async Task CreateLikeNotificationAsync(Guid targetUserId, Guid actorId)
+        {
+            var notification = new Notification
+            {
+                NotifId = Guid.NewGuid(),
+                UserId = targetUserId,
+                Type = "LIKE",
+                RefId = actorId,
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+            await _notificationRepository.AddAsync(notification);
+            _notificationState.NotifyUser(targetUserId);
+        }
+
+        public async Task CreateCommentNotificationAsync(Guid targetUserId, Guid actorId)
+        {
+            var notification = new Notification
+            {
+                NotifId = Guid.NewGuid(),
+                UserId = targetUserId,
+                Type = "COMMENT",
+                RefId = actorId,
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+            await _notificationRepository.AddAsync(notification);
+            _notificationState.NotifyUser(targetUserId);
+        }
     }
 
     public async Task<IReadOnlyList<NotificationItem>> GetForUserAsync(Guid userId, int take = 30)

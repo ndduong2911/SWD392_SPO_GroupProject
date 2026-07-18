@@ -21,6 +21,12 @@ public class CommentRepository : ICommentRepository
 
     public async Task<IEnumerable<Comment>> GetByPhotoIdAsync(Guid photoId)
     {
-        return await _context.Comments.Where(c => c.PhotoId == photoId).Include(c => c.User).ToListAsync();
+        return await _context.Comments
+            .Where(c => c.PhotoId == photoId && c.ParentId == null)
+            .Include(c => c.User)
+            .Include(c => c.InverseParent)
+                .ThenInclude(r => r.User)
+            .OrderBy(c => c.CreatedAt)
+            .ToListAsync();
     }
 }

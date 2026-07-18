@@ -45,17 +45,37 @@
                                     <p class="text-sm font-semibold text-slate-800">Thông báo</p>
                                     @if (unreadCount > 0)
                                     {
-                                        <button @onclick="MarkAllReadAsync"
-                                                class="text-xs text-fuchsia-600 hover:text-fuchsia-700 font-medium">
-                                            Đánh dấu đã đọc
-                                        </button>
-                                    }
-                                </div>
-                                <div class="max-h-96 overflow-y-auto">
-                                    @if (notifications == null)
-                                    {
-                                        <div class="px-4 py-8 text-center text-sm text-slate-400">
-                                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang tải...
+                                        <div class="px-4 py-3 hover:bg-slate-50 transition border-b border-slate-50 flex items-start gap-3">
+                                            @if (notif.Type == "LIKE")
+                                            {
+                                                <i class="fa-solid fa-heart text-red-500 mt-1"></i>
+                                                <div>
+                                                    <p class="text-sm text-slate-700">
+                                                        <span class="font-bold">@GetUsernameFromId(notif.RefId)</span> đã thích ảnh của bạn!
+                                                    </p>
+                                                    <span class="text-xs text-slate-400">@notif.CreatedAt.ToString("HH:mm dd/MM")</span>
+                                                </div>
+                                            }
+                                            else if (notif.Type == "COMMENT")
+                                            {
+                                                <i class="fa-solid fa-comment text-blue-500 mt-1"></i>
+                                                <div>
+                                                    <p class="text-sm text-slate-700">
+                                                        <span class="font-bold">@GetUsernameFromId(notif.RefId)</span> đã bình luận về ảnh của bạn!
+                                                    </p>
+                                                    <span class="text-xs text-slate-400">@notif.CreatedAt.ToString("HH:mm dd/MM")</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <i class="fa-solid fa-user-plus text-fuchsia-600 mt-1"></i>
+                                                <div>
+                                                    <p class="text-sm text-slate-700">
+                                                        <span class="font-bold">@GetUsernameFromId(notif.RefId)</span> đã theo dõi bạn!
+                                                    </p>
+                                                    <span class="text-xs text-slate-400">@notif.CreatedAt.ToString("HH:mm dd/MM")</span>
+                                                </div>
+                                            }
                                         </div>
                                     }
                                     else if (notifications.Count == 0)

@@ -10,4 +10,5 @@ public interface ISocialService
     Task<IEnumerable<Comment>> GetCommentsByPhotoIdAsync(Guid photoId);
     Task<bool> FollowUserAsync(Guid followerId, Guid followingId);
     Task<bool> UnfollowUserAsync(Guid followerId, Guid followingId);
+    Task<bool> HasLikedAsync(Guid userId, Guid photoId);
 }
