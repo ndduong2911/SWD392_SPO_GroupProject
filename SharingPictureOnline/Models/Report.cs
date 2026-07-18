@@ -36,4 +36,7 @@ public partial class Report
     public DateTime CreatedAt { get; set; }
 
     public virtual User Reporter { get; set; } = null!;
+
+    // Navigation: audit history cho report này
+    public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

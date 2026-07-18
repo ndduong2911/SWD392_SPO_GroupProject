@@ -1,10 +1,31 @@
-namespace SharingPictureOnline.Services
+namespace SharingPictureOnline.Services;
+
+public interface INotificationService
 {
-    public interface INotificationService
-    {
-        Task CreateFollowNotificationAsync(Guid followerId, Guid followedUserId);
-        Task MarkAllAsReadAsync(Guid userId);
-        Task CreateLikeNotificationAsync(Guid targetUserId, Guid photoId);
-        Task CreateCommentNotificationAsync(Guid targetUserId, Guid photoId);
-    }
+    // Social notifications (follow / like / comment)
+    Task CreateFollowNotificationAsync(Guid followerId, Guid followedUserId);
+    Task CreateLikeNotificationAsync(Guid targetUserId, Guid actorId);
+    Task CreateCommentNotificationAsync(Guid targetUserId, Guid actorId);
+
+    // Inbox UI
+    Task<IReadOnlyList<NotificationItem>> GetForUserAsync(Guid userId, int take = 30);
+    Task<int> GetUnreadCountAsync(Guid userId);
+    Task MarkAsReadAsync(Guid notifId, Guid userId);
+    Task MarkAllAsReadAsync(Guid userId);
+}
+
+public class NotificationItem
+{
+    public Guid NotifId { get; set; }
+    public string Type { get; set; } = null!;
+    public Guid? RefId { get; set; }
+    public bool IsRead { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string Title { get; set; } = null!;
+    public string Message { get; set; } = null!;
+    public string Icon { get; set; } = "fa-solid fa-bell";
+    public string? StatusLabel { get; set; }
+    public string? ActionLabel { get; set; }
+    /// <summary>Optional deep-link when the user clicks the notification.</summary>
+    public string? NavigateUrl { get; set; }
 }
