@@ -9,5 +9,5 @@ public interface IPhotoService
     Task<Photo> CreatePhotoAsync(Photo photo);
     Task<bool> UpdatePhotoAsync(Photo photo);
     Task<bool> DeletePhotoAsync(Guid id);
-    Task<IEnumerable<Photo>> GetPhotosByUserIdAsync(Guid userId);
+    Task<IEnumerable<Photo>> GetPhotosByUserIdAsync(Guid userId, bool includeHidden = false);
 }

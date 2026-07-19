@@ -14,7 +14,7 @@ public class PhotoRepository : IPhotoRepository
 
     public async Task<IEnumerable<Photo>> GetAllAsync()
     {
-        return await _context.Photos.Include(p => p.User).ToListAsync();
+        return await _context.Photos.Include(p => p.User).Where(p => p.Visibility != "HIDDEN").ToListAsync();
     }
 
     public async Task<Photo?> GetByIdAsync(Guid id)
@@ -43,8 +43,13 @@ public class PhotoRepository : IPhotoRepository
         return await _context.SaveChangesAsync() > 0;
     }
 
-    public async Task<IEnumerable<Photo>> GetByUserIdAsync(Guid userId)
+    public async Task<IEnumerable<Photo>> GetByUserIdAsync(Guid userId, bool includeHidden = false)
     {
-        return await _context.Photos.Where(p => p.UserId == userId).ToListAsync();
+        var query = _context.Photos.Where(p => p.UserId == userId);
+        if (!includeHidden)
+        {
+            query = query.Where(p => p.Visibility != "HIDDEN");
+        }
+        return await query.ToListAsync();
     }
 }

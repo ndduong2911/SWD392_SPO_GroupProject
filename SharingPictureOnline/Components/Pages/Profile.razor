@@ -273,7 +273,7 @@ else
 
             if (profileUser != null)
             {
-                userPhotos = (await PhotoService.GetPhotosByUserIdAsync(profileUser.UserId)).ToList();
+                userPhotos = (await PhotoService.GetPhotosByUserIdAsync(profileUser.UserId, includeHidden: isOwnProfile)).ToList();
                 userAlbums = (await AlbumService.GetAllAlbumsAsync())
                     .Where(a => a.UserId == profileUser.UserId).ToList();
 

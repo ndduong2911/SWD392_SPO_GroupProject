@@ -38,8 +38,8 @@ public class PhotoService : IPhotoService
         return await _photoRepository.DeleteAsync(id);
     }
 
-    public async Task<IEnumerable<Photo>> GetPhotosByUserIdAsync(Guid userId)
+    public async Task<IEnumerable<Photo>> GetPhotosByUserIdAsync(Guid userId, bool includeHidden = false)
     {
-        return await _photoRepository.GetByUserIdAsync(userId);
+        return await _photoRepository.GetByUserIdAsync(userId, includeHidden);
     }
 }

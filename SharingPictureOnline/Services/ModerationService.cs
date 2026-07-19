@@ -44,15 +44,10 @@ public class ModerationService : IModerationService
         if (report.ReporterId == actorId) return false;
 
         string newStatus = action == "DISMISS" ? "REJECTED" : "RESOLVED";
-
-        // Use a transaction so enforcement, status update and audit log are atomic.
-        // Note: ReportRepository.UpdateStatusAsync calls SaveChangesAsync,
-        // but the ambient transaction will still ensure atomicity.
         using var tx = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            // Enforce the chosen action on the target
             if (action != "DISMISS")
             {
                 switch (action)
@@ -69,6 +64,10 @@ public class ModerationService : IModerationService
 
                     case "REMOVE_CONTENT":
                         await RemoveContentAsync(report.TargetType, report.TargetId);
+                        break;
+
+                    case "RESTORE_CONTENT":
+                        await RestoreContentAsync(report.TargetType, report.TargetId);
                         break;
 
                     case "SUSPEND_ACCOUNT":
@@ -161,7 +160,6 @@ public class ModerationService : IModerationService
                 _context.Photos.Remove(photo);
 
                 // If you store files externally (Cloudinary/Azure/S3), delete storage object here.
-                // This project has Cloudinary config in appsettings — integrate deletion if needed.
 
                 await _context.SaveChangesAsync();
             }
@@ -174,6 +172,26 @@ public class ModerationService : IModerationService
                 _context.Comments.Remove(comment);
                 await _context.SaveChangesAsync();
             }
+        }
+    }
+
+    public async Task RestoreContentAsync(string targetType, Guid targetId)
+    {
+        if (targetType == "PHOTO")
+        {
+            var photo = await _context.Photos.FindAsync(targetId);
+            if (photo != null)
+            {
+                // restore visibility to a visible state used by the app
+                photo.Visibility = "PUBLIC";
+                await _context.SaveChangesAsync();
+            }
+            // if photo == null then it was removed; restoration is not possible here
+        }
+        else if (targetType == "COMMENT")
+        {
+            // Comments are permanently removed by RemoveContentAsync — to support comment restore,
+            // implement soft-delete on comments and update here.
         }
     }
 

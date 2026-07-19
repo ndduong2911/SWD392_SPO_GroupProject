@@ -329,14 +329,27 @@ else
     protected override async Task OnInitializedAsync()
     {
         photo = await PhotoService.GetPhotoByIdAsync(Id);
+        currentUser = await AuthService.GetCurrentUserAsync();
+        
         if (photo == null)
         {
             Navigation.NavigateTo("/");
             return;
         }
 
+        // Check if photo is hidden and user is not owner or admin
+        if (photo.Visibility == "HIDDEN")
+        {
+            bool isOwner = currentUser?.UserId == photo.UserId;
+            bool isAdmin = currentUser?.Role == "ADMIN";
+            if (!isOwner && !isAdmin)
+            {
+                Navigation.NavigateTo("/");
+                return;
+            }
+        }
+
         comments = await SocialService.GetCommentsByPhotoIdAsync(Id);
-        currentUser = await AuthService.GetCurrentUserAsync();
 
         if (currentUser != null)
         {

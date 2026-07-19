@@ -11,7 +11,7 @@ public interface IModerationService
 
     /// <summary>
     /// Resolves a report with a moderation action.
-    /// Action values: "DISMISS" | "WARN_USER" | "HIDE_CONTENT" | "REMOVE_CONTENT" | "SUSPEND_ACCOUNT"
+    /// Action values: "DISMISS" | "WARN_USER" | "HIDE_CONTENT" | "REMOVE_CONTENT" | "SUSPEND_ACCOUNT" | "RESTORE_CONTENT"
     /// </summary>
     Task<bool> ResolveReportAsync(Guid reportId, string action, Guid actorId);
 
@@ -20,6 +20,7 @@ public interface IModerationService
     // Content / account enforcement helpers
     Task HideContentAsync(string targetType, Guid targetId);
     Task RemoveContentAsync(string targetType, Guid targetId);
+    Task RestoreContentAsync(string targetType, Guid targetId);
     Task SuspendAccountAsync(Guid userId);
     Task WarnUserAsync(Guid userId, Guid reportId);
 
